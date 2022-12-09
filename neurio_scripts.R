@@ -16,6 +16,9 @@ get_token<-function(client_id,client_secret){
   }
 
 
+
+
+
 #token_id<-"AIOO-2mxvJ42jWrVuwmFKPzHNmcxady7V7gACklOFPGLXm-D1f4hRR9ECcYRD7vIBZyDhHeYtqw6R2gJZ8F1Gh0ysVyu8q05Xf_y4LlJmoU9q21n_0PtE-z7i3NbGFfYlDYMa-6fLw7YX-ogc61JTG3Lpq3M82SUm_EJKIvsfHIB1g7WNMvDW00MV5Qn6rZaPeDqJnsRVf9_qpry0AznNU_bGXLg5XWrjKky_VaRtJo0Zu2k2fRzlgmq7ZkLPTS6K2S6Wqf_E6b_"
 
 
@@ -25,7 +28,6 @@ get_token<-function(client_id,client_secret){
 #test<-httr::VERB(verb = "GET", url = "https://api.neur.io/v1/samples/stats?sensorId=0x0000C47F510354AE&start=2017-08-16T10:00:00Z&end=2017-08-17T03:00:00Z&granularity=minutes&frequency=5&timezone=America/Edmonton", 
 #                       httr::add_headers(Authorization = "Bearer AIOO-2nAWDW89l_OJHK4wnuOKi_paoTLxKREWXZQuSLpefCSAhfxbeIslCQyQ8VXBiyvfRq3mlXOFLOu8clU31RN5l6B9YayQlP35VV12jtmrfueoWfabUfNtRl4HwNoNqeKxnxnlp7gl4zp-c4scD40OF-yZQgMZvf85Fzk7NXqycVBRC1EX7zjdKqjLyQsHRa2XhRzfgZSIxFMBcjZI-Rr_m6xq3dP3Tufp6rlaEVoViVyp24I3YCu9ndBSdg3fRUtyRN7nKgz"), 
 #                       encode = "json")
-
 
 
 get_neurio<-function(start_string,end_string,time_unit,time_freq,sensor_id,token_id)
@@ -50,7 +52,7 @@ get_neurio<-function(start_string,end_string,time_unit,time_freq,sensor_id,token
   #test<-httr::VERB(verb = "GET", url = "https://api.neur.io/v1/samples/stats?sensorId=0x0000C47F510354AE&start=2017-08-16T19:35:00Z&end=2017-08-17T05:51:08Z&granularity=minutes&frequency=5&timezone=America/Edmonton", 
   #                 httr::add_headers(Authorization = "Bearer AIOO-2nAWDW89l_OJHK4wnuOKi_paoTLxKREWXZQuSLpefCSAhfxbeIslCQyQ8VXBiyvfRq3mlXOFLOu8clU31RN5l6B9YayQlP35VV12jtmrfueoWfabUfNtRl4HwNoNqeKxnxnlp7gl4zp-c4scD40OF-yZQgMZvf85Fzk7NXqycVBRC1EX7zjdKqjLyQsHRa2XhRzfgZSIxFMBcjZI-Rr_m6xq3dP3Tufp6rlaEVoViVyp24I3YCu9ndBSdg3fRUtyRN7nKgz"), 
   #                 encode = "json")
-  #print(paste("Rate limit remaining is ",test$headers$`ratelimit-remaining`))
+  print(paste("Rate limit remaining is ",test$headers$`ratelimit-remaining`))
   raise <- content(test, as="text")
   #convert to list using RJSONIO
   fromJSON(raise) -> new
@@ -194,9 +196,10 @@ sys_data
 #you can read the message in get_neurio and the pause for the number of seconds and go back
 
 
-update_data <- function(data_sent,token=token_id,sensor=sensor_id) {
+update_data <- function(data_sent,token=token_id,sensor=sensor_id,rate_limit=140) {
   #testing
-  #data_sent<-sys_data
+  #rate_limit<-limit
+  #sys_data<-sys_data %>% filter(year<2022)
   
   time_unit<-"minutes"
   time_freq<-5
@@ -215,26 +218,28 @@ update_data <- function(data_sent,token=token_id,sensor=sensor_id) {
     sys_data<-data_sent}
   start_string<-max(sys_data$end)
   start_point<-start_string  
-  end_string<-min(as.POSIXct(start_point)+days(120),Sys.time())
+  end_string<-min(as.POSIXct(start_point)+days(rate_limit),Sys.time())
   while(start_point<end_string)
   {
     #get data
     end_point<-as.POSIXct(start_point)+hours(24)
+    #end_point<-as.POSIXct(start_point)-hours(24)
     new_data<-get_neurio(start_point,end_point,time_unit,time_freq,sensor,token)
     new_data<-new_data %>% mutate(year=year(start),month=month(start),hour=hour(start),he=hour(start)+1,day=day(start),date=date(start))
     sys_data<-rbind(sys_data,new_data)
     start_point<-end_point
     print(paste("Iteration done until ",end_point,sep = ""))
+    print(paste("Message ",new_data$message,sep = ""))
   }
   
   return(sys_data)  
 }
 
-load_and_update<-function(load_file="solar_data.RData"){
+load_and_update<-function(load_file="solar_data.RData",rate_limit=140){
   load_file<-"solar_data.RData"
   load(load_file,.GlobalEnv) 
   if(max(sys_data$start)+minutes(10)<Sys.time())
-     sys_data<-update_data(sys_data)
+     sys_data<-update_data(sys_data,rate_limit = rate_limit)
   sys_data<-sys_data %>% mutate(year=year(start),month=month(start),hour=hour(start),he=hour(start)+1,day=day(start),date=date(start))
   save(sys_data, file= "solar_data.RData")
   #write.xlsx(sys_data, file = "neurio_5_min.xlsx", colNames = TRUE, borders = "columns") 

@@ -1,12 +1,4 @@
-#Mac
-if(R.version$platform ==  "x86_64-apple-darwin15.6.0")
-  setwd("/Users/aleach/Google Drive/Solar")
-#PC
-if(R.version$platform ==  "x86_64-w64-mingw32")
-  setwd("C:/Users/aleach/Google Drive/Solar")
-print(getwd())
 source("../andrew_base.R")
-
 
 #curl -i -X POST --data "grant_type=client_credentials&client_id=P8EEG3rvRxyqWd_beUBCJA&client_secret=ki6M5J_hTtiXuMAcHHPmtw" https://api.neur.io/v1/oauth2/token
 
@@ -41,13 +33,19 @@ token_id<- get_token(my_client_id,my_client_secret)
 load_file<-"hourly_solar_data.RData"
 load(load_file,.GlobalEnv) 
 hourly_data<-get_hourly_data(hourly_data%>%filter(start<Sys.time()-days(1)))
+#hourly_data<-sys_data
 save(hourly_data, file= "hourly_solar_data.RData")
 write.csv(hourly_data,"leach_solar_hourly.csv")
 
 #fix<-hourly_data %>% filter(generationEnergy<0)
-#update high frequency data
+#check rate limit
+api_url = paste("https://api.neur.io/v1/samples/live/last?","sensorId=",sensor_id,sep="")
+test<-httr::VERB(verb = "GET", url = api_url, 
+                 httr::add_headers(Authorization = paste("Bearer ",token_id,sep="")), 
+                 encode = "json")
+limit<-test$headers$`ratelimit-remaining`
 
-load_and_update()
+load_and_update(rate_limit = 50)
 load("solar_data.RData",.GlobalEnv) 
 
 
@@ -1564,7 +1562,7 @@ test_data<-sys_data %>% left_join(forecast_data%>%select(time,actual_posted_pool
 #2018 Rider J -0.172 c/kWh
 #2019 Rider J +0.01 c/kWh
 #2020 Rider J: 0.168 Â¢/kWh.
-#2021 Rider J: 0.110 ¢/kWh
+#2021 Rider J: 0.110 ?/kWh
 
 #Rider G Balancing Pool
 #2021 Rider G $0.00238/kWh.
