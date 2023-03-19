@@ -30,6 +30,13 @@ get_token<-function(client_id,client_secret){
 #                       encode = "json")
 
 
+
+#test_data<-get_neurio(start_point,end_point,time_unit,time_freq,sensor,token)
+#time_unit<-"minutes"
+#
+
+
+
 get_neurio<-function(start_string,end_string,time_unit,time_freq,sensor_id,token_id)
 {
   if(time_unit=="minutes") #don't allow more than 24 hours of 5 minute data
@@ -43,6 +50,7 @@ get_neurio<-function(start_string,end_string,time_unit,time_freq,sensor_id,token
   end_time<-paste(format(with_tz(as.POSIXct(end_string),tz = "UTC"),"%Y-%m-%dT%H:%M:%SZ"),sep="")
   api_url = paste("https://api.neur.io/v1/samples/stats?","sensorId=",sensor_id,"&start=",start_time,"&end=",end_time,"&granularity=",time_unit,"&frequency=",time_freq,"&timezone=America/Edmonton",sep="")
   
+  
   test<-httr::VERB(verb = "GET", url = api_url, 
                    httr::add_headers(Authorization = paste("Bearer ",token_id,sep="")), 
                    encode = "json")
@@ -55,7 +63,7 @@ get_neurio<-function(start_string,end_string,time_unit,time_freq,sensor_id,token
   print(paste("Rate limit remaining is ",test$headers$`ratelimit-remaining`))
   raise <- content(test, as="text")
   #convert to list using RJSONIO
-  fromJSON(raise) -> new
+  new<-fromJSON(raise)
   testing<<-new
   #convert from watt-seconds to kWh
   if(time_unit=="minutes")
@@ -133,7 +141,7 @@ test<-httr::VERB(verb = "GET", url = api_url,
                  httr::add_headers(Authorization = paste("Bearer ",token_id,sep="")), 
                  encode = "json")
 print(paste("Rate limit remaining is ",test$headers$`ratelimit-remaining`))
-print(paste("Rate limit reset in ",as.numeric(test$headers$`ratelimit-reset`)/1000,"seconds"))
+print(paste("Rate limit reset in ",duration(as.numeric(test$headers$`ratelimit-reset`)/1000,"seconds")))
 print(paste("Rate limit reset at ",format(Sys.time()+milliseconds(as.numeric(test$headers$`ratelimit-reset`)))))
 
 #raise <- content(test, as="text")
@@ -141,8 +149,10 @@ print(paste("Rate limit reset at ",format(Sys.time()+milliseconds(as.numeric(tes
 #fromJSON(raise) -> new
 #testing<<-new
 #return(testing)
+test$headers$`ratelimit-remaining`
 }
 
+#sample_neurio()
 
 get_hourly_data <- function(data_sent,token=token_id,sensor=sensor_id) {
   #testing
@@ -225,17 +235,22 @@ update_data <- function(data_sent,token=token_id,sensor=sensor_id,rate_limit=140
     end_point<-as.POSIXct(start_point)+hours(24)
     #end_point<-as.POSIXct(start_point)-hours(24)
     new_data<-get_neurio(start_point,end_point,time_unit,time_freq,sensor,token)
-    new_data<-new_data %>% mutate(year=year(start),month=month(start),hour=hour(start),he=hour(start)+1,day=day(start),date=date(start))
-    sys_data<-rbind(sys_data,new_data)
+    if(is.data.frame(new_data)) #if there is no data for the interval, the return is a list rather than a data frame
+      {
+      print("adding data")
+      new_data<-new_data %>% mutate(year=year(start),month=month(start),hour=hour(start),he=hour(start)+1,day=day(start),date=date(start))
+      sys_data<-rbind(sys_data,new_data)
+      print(max(sys_data$start))
+      }
     start_point<-end_point
     print(paste("Iteration done until ",end_point,sep = ""))
     print(paste("Message ",new_data$message,sep = ""))
   }
-  
   return(sys_data)  
 }
 
 load_and_update<-function(load_file="solar_data.RData",rate_limit=140){
+  #rate_limit<-sample_neurio()
   load_file<-"solar_data.RData"
   load(load_file,.GlobalEnv) 
   if(max(sys_data$start)+minutes(10)<Sys.time())

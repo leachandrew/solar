@@ -1352,9 +1352,6 @@ df1$month_test = factor(df1$month_test,levels=unique(df1$month_test))
 df1$hour<-factor(df1$hour,levels = seq(0,23),labels=paste(seq(0,23),":00",sep=""))
 df1$day<-as.factor(as.Date(df1$start))
 
-png<-1
-if(png==1)
-  set_png("power_use_day.png")
 library(ggrepel)
 p<-ggplot(df1)+
   geom_line(aes(start,consumptionEnergy),size=2)+
@@ -1383,12 +1380,14 @@ p<-ggplot(df1)+
     panel.grid.minor = element_blank(),
     text = element_text(size = 16,face = "bold"),
     axis.text = element_text(size = 14,face = "bold", colour="black"))+
-  labs(x="Hour",y="Electricity Use (kWh/h)",
+  labs(x="",y="Electricity Use (kW)",
        title="Power Use (5 minute data)",
+       subtitle=paste("Total daily use: ",round(sum(df1$consumptionEnergy*5/60),2),"kWh. Peak demand: ",round(max(df1$consumptionEnergy*5/60),2),sep=""),
        caption="Source: SolarPeople system data via Neurio API, graph by Andrew Leach")
 print(p)
-if(png==1)
-  dev.off()
+ggsave("power_use_day.png",dpi=300,width=16,height=7,bg="white")
+
+
 
 png<-1
 if(png==1)
@@ -1690,7 +1689,7 @@ test_data<-sys_data %>% left_join(forecast_data%>%select(time,actual_posted_pool
 
 #2017 Rider K 0.258 ?/kWh
 #2018 Rider K 0.358 ?/kWh
-#2019 Rider K 0.203 ¢/kWh
+#2019 Rider K 0.203 ?/kWh
 
 #Rider J -0.172 c/kWh
 #Rider J +0.01 c/kWh
@@ -1710,7 +1709,7 @@ test_data<-sys_data %>% left_join(forecast_data%>%select(time,actual_posted_pool
 #Distribution 2018 $0.00951
 
 #RIDER DJ
-#2019 0.276 ¢/kWh
+#2019 0.276 ?/kWh
 
 
 test_data$T_D<-0.00258-.00172+0.00170+0.03080+0.00861
