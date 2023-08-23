@@ -39,6 +39,7 @@ get_token<-function(client_id,client_secret){
 
 get_neurio<-function(start_string,end_string,time_unit,time_freq,sensor_id,token_id)
 {
+  print(paste("time_freq is ",time_freq))
   if(time_unit=="minutes") #don't allow more than 24 hours of 5 minute data
     end_string<-min(as.POSIXct(end_string),as.POSIXct(start_string)+24*60*60)
   if(time_unit=="hours") #don't allow more than 31 days for hourly data
@@ -85,10 +86,10 @@ get_neurio<-function(start_string,end_string,time_unit,time_freq,sensor_id,token
   # watt-second * 1kW/1000W * 1 min/60 seconds * 1 hour/60 mins * 1 day/24 hours
   if(time_unit=="days")
   {
-    new$consumptionEnergy=new$consumptionEnergy/1000/60/60/24/time_freq
-    new$generationEnergy=new$generationEnergy/1000/60/60/24/time_freq
-    new$importedEnergy=new$importedEnergy/1000/60/60/24/time_freq
-    new$exportedEnergy=new$exportedEnergy/1000/60/60/24/time_freq
+    new$consumptionEnergy=new$consumptionEnergy/1000/60/60/time_freq
+    new$generationEnergy=new$generationEnergy/1000/60/60/time_freq
+    new$importedEnergy=new$importedEnergy/1000/60/60/time_freq
+    new$exportedEnergy=new$exportedEnergy/1000/60/60/time_freq
   }
   
   new$net_to_grid<-new$importedEnergy-new$exportedEnergy
@@ -158,7 +159,7 @@ get_hourly_data <- function(data_sent,token=token_id,sensor=sensor_id) {
   #testing
     #token<-token_id
     #sensor<-sensor_id
-   #sys_data<-hourly_data
+   #data_sent<-hourly_data
   #end testing
   
   time_unit<-"hours"
@@ -172,7 +173,49 @@ get_hourly_data <- function(data_sent,token=token_id,sensor=sensor_id) {
     ##end_string<- Sys.time()
     #get initiatial data
     start_point<-start_string
-    end_point<-as.POSIXct(start_string)+days(30)
+    end_point<-as.POSIXct(start_string)+days(20)
+    data<-get_neurio(start_point,end_point,time_unit,time_freq,sensor,token)%>% 
+      mutate(year=year(start),month=month(start),hour=hour(start),he=hour(start)+1,day=day(start),date=date(start))
+  }
+  if(!missing(data_sent)){
+    data<-data_sent}
+  start_string<-max(data$end)
+  start_point<-start_string  
+  end_string<-min(as.POSIXct(start_point)+days(120*30),round_date(Sys.time()-hours(2), unit = "hour"))
+  while(start_point<end_string)
+  {
+    #get data
+    end_point<-min(as.POSIXct(start_point)+days(10),end_string)
+    add_data<-get_neurio(start_point,end_point,time_unit,time_freq,sensor,token)
+    add_data<-add_data %>% mutate(year=year(start),month=month(start),hour=hour(start),he=hour(start)+1,day=day(start),date=date(start))
+    data<-rbind(data,add_data)
+    start_point<-end_point
+    print(paste("Iteration done until ",end_point,sep = ""))
+  }
+data
+}
+
+
+
+get_daily_data <- function(data_sent,token=token_id,sensor=sensor_id) {
+  #testing
+  #token<-token_id
+  #sensor<-sensor_id
+  #sys_data<-hourly_data
+  #end testing
+  
+  time_unit<-"days"
+  time_freq<-1
+  
+  if(missing(data_sent)){
+    start_string<-"2017-08-17 0:00:00 MDT"
+    #start_string<- Sys.time()-24*60*60
+    end_string<-round_date(Sys.time()-hours(1), unit = "days")
+    #end_string<-"2017-08-20 12:00:00 MDT"
+    ##end_string<- Sys.time()
+    #get initiatial data
+    start_point<-start_string
+    end_point<-as.POSIXct(start_string)+days(90)
     sys_data<-get_neurio(start_point,end_point,time_unit,time_freq,sensor,token)%>% 
       mutate(year=year(start),month=month(start),hour=hour(start),he=hour(start)+1,day=day(start),date=date(start))
   }
@@ -180,19 +223,20 @@ get_hourly_data <- function(data_sent,token=token_id,sensor=sensor_id) {
     sys_data<-data_sent}
   start_string<-max(sys_data$end)
   start_point<-start_string  
-  end_string<-min(as.POSIXct(start_point)+days(120*30),round_date(Sys.time()-hours(2), unit = "hour"))
+  end_string<-min(as.POSIXct(start_point)+days(120*30),floor_date(Sys.time(), unit = "days")) #last full day
   while(start_point<end_string)
   {
     #get data
-    end_point<-min(as.POSIXct(start_point)+days(30),end_string)
+    end_point<-min(as.POSIXct(start_point)+days(90),end_string)
     new_data<-get_neurio(start_point,end_point,time_unit,time_freq,sensor,token)
     new_data<-new_data %>% mutate(year=year(start),month=month(start),hour=hour(start),he=hour(start)+1,day=day(start),date=date(start))
     sys_data<-rbind(sys_data,new_data)
     start_point<-end_point
     print(paste("Iteration done until ",end_point,sep = ""))
   }
-sys_data
+  sys_data
 }
+
 
 
 
@@ -209,7 +253,7 @@ sys_data
 update_data <- function(data_sent,token=token_id,sensor=sensor_id,rate_limit=140) {
   #testing
   #rate_limit<-limit
-  #sys_data<-sys_data %>% filter(year<2022)
+  #data_sent<-sys_data %>% filter(year<2022)
   
   time_unit<-"minutes"
   time_freq<-5
@@ -221,18 +265,18 @@ update_data <- function(data_sent,token=token_id,sensor=sensor_id,rate_limit=140
     ##end_string<- Sys.time()
     #get initiatial data
     start_point<-start_string
-    end_point<-as.POSIXct(start_string)+hours(24)
+    end_point<-as.POSIXct(start_string)+hours(20)
     sys_data<-get_neurio(start_point,end_point,time_unit,time_freq,sensor,token)
   }
   if(!missing(data_sent)){
     sys_data<-data_sent}
   start_string<-max(sys_data$end)
   start_point<-start_string  
-  end_string<-min(as.POSIXct(start_point)+days(rate_limit),Sys.time())
+  end_string<-min(as.POSIXct(start_point)+hours(as.numeric(rate_limit)*20),Sys.time())
   while(start_point<end_string)
   {
     #get data
-    end_point<-as.POSIXct(start_point)+hours(24)
+    end_point<-as.POSIXct(start_point)+hours(20)
     #end_point<-as.POSIXct(start_point)-hours(24)
     new_data<-get_neurio(start_point,end_point,time_unit,time_freq,sensor,token)
     if(is.data.frame(new_data)) #if there is no data for the interval, the return is a list rather than a data frame
@@ -250,9 +294,10 @@ update_data <- function(data_sent,token=token_id,sensor=sensor_id,rate_limit=140
 }
 
 load_and_update<-function(load_file="solar_data.RData",rate_limit=140){
-  #rate_limit<-sample_neurio()
+  rate_limit<-as.numeric(sample_neurio())
   load_file<-"solar_data.RData"
   load(load_file,.GlobalEnv) 
+  #sys_data<-sys_data %>% filter(start<ymd("2023-05-24"))
   if(max(sys_data$start)+minutes(10)<Sys.time())
      sys_data<-update_data(sys_data,rate_limit = rate_limit)
   sys_data<-sys_data %>% mutate(year=year(start),month=month(start),hour=hour(start),he=hour(start)+1,day=day(start),date=date(start))

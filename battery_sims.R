@@ -1,37 +1,50 @@
-#Mac
-if(R.version$platform ==  "x86_64-apple-darwin15.6.0")
-  setwd("/Users/aleach/Google Drive")
-#PC
-if(R.version$platform ==  "x86_64-w64-mingw32")
-  setwd("C:/Users/aleach/Google Drive")
-print(getwd())
-source("andrew_base.R")
+source("../andrew_base.R")
+source("../tableau.R")
 
 
-load("hourly_data.RData")
+load("hourly_solar_data.RData")
 
 load("solar_data.RData",.GlobalEnv) 
 
-hourly_data<-sys_data
-hourly_data$start<-round_date(hourly_data$start, "1 hours") 
-hourly_data<-aggregate(. ~ start, hourly_data, mean)
-hourly_data$end<-hourly_data$start+hours(1)
-hourly_data<-hourly_data %>% mutate(month=month(start),hour=hour(start)+1,day=day(start),min=minute(start))
+#clean data
 
+sys_data<-sys_data %>% mutate(
+  consumptionEnergy=ifelse(consumptionEnergy<0,NA,consumptionEnergy),
+  generationEnergy=ifelse(generationEnergy<0,NA,generationEnergy),
+  importedEnergy=ifelse(importedEnergy<0,NA,importedEnergy),
+  exportedEnergy=ifelse(importedEnergy<0,NA,exportedEnergy))%>%
+  fill(consumptionEnergy,generationEnergy,importedEnergy,exportedEnergy)%>%
+  mutate(
+  net_to_grid=consumptionEnergy-generationEnergy
+)
 
+hourly_data<-hourly_data %>% mutate(
+  consumptionEnergy=ifelse(consumptionEnergy<0,NA,consumptionEnergy),
+  generationEnergy=ifelse(generationEnergy<0,NA,generationEnergy),
+  importedEnergy=ifelse(importedEnergy<0,NA,importedEnergy),
+  exportedEnergy=ifelse(importedEnergy<0,NA,exportedEnergy))%>%
+  fill(consumptionEnergy,generationEnergy,importedEnergy,exportedEnergy)%>%
+  mutate(
+    net_to_grid=consumptionEnergy-generationEnergy
+  )%>%
+  slice(-1)
 
 
 #merge solar data with price data
-#if(!exists("get_forecast_report", mode="function")) source("aeso_scrapes.R")
-#update_forecasts()
+if(!exists("get_forecast_report", mode="function")) 
+  source("../alberta_power/aeso_scrapes.R")
+update_forecasts()
 #reload it
-load("Alberta Power Data/forecast_data.Rdata")
+load("../alberta_power/data/forecast_data.Rdata")
 
 #make an he in the sys_data
 sys_data$he_full<-as.POSIXct(paste(date(sys_data$start)," ",hour(sys_data$start)+1,":00",sep=""),"%Y-%m-%d %H:%M",tz = "America/Denver")
 
 forecast_data$he_full<-as.POSIXct(paste(date(forecast_data$date)," ",forecast_data$he,":00",sep=""),"%Y-%m-%d %H:%M",tz = "America/Denver")
 test_data<-merge(sys_data,forecast_data,by.x =c("he_full"),by.y=c("he_full"))
+
+hourly_data$he_full<-as.POSIXct(paste(date(hourly_data$start)," ",hour(hourly_data$start)+1,":00",sep=""),"%Y-%m-%d %H:%M",tz = "America/Denver")
+hourly_data<-merge(hourly_data,forecast_data,by.x =c("he_full"),by.y=c("he_full"))
 
 
 
@@ -60,11 +73,11 @@ solar_data$Hour<-solar_data$Hour+1
 
 
 work_data<-hourly_data
-dat2 <- data.frame(seq.POSIXt(min(work_data$start),min(work_data$start)+years(1),by="1 hour"))
+dat2 <- data.frame(seq.POSIXt(min(hourly_data$start),max(hourly_data$start),by="1 hour"))
 names(dat2)[1]<-"start"
+
 work_data<-merge(dat2,work_data,by=c("start"),all.x = T)
-work_data<-work_data %>% mutate(month=month(start),hour=hour(start)+1,day=day(start),min=minute(start))
-work_data$day<-as.numeric(work_data$day)
+work_data<-work_data %>% mutate(month=month(start),hour=hour(start)+1,day=day(start),min=minute(start),day=as.numeric(day))
 work_data<-merge(work_data,solar_data,by.x=c("month","hour","day"),by.y=c("Month","Hour","Day"),all.x = T)
 
 work_data$weekday<-ifelse(wday(work_data$start) %in% seq(1,5),1,0)
@@ -77,10 +90,10 @@ work_data<-arrange(work_data,start)
 
 
 #linearMod <- lm(consumptionEnergy^2 ~ month+hour+wd+wd*hour+month*hour+`Ambient.Temperature.(C)`+`Ambient.Temperature.(C)`^2, data=work_data)  # build linear regression model on full data
-linearMod <- lm(consumptionEnergy ~ wd+wd*he+month*he+month^2*he+month^3*he, data=work_data)  # build linear regression model on full data
-print(linearMod)
-test<-data.frame(predict(linearMod, work_data, se.fit = TRUE))
-work_data<-cbind(work_data,test)
+#linearMod <- lm(consumptionEnergy ~ wd+wd*he+month*he+month^2*he+month^3*he, data=work_data)  # build linear regression model on full data
+#print(linearMod)
+#test<-data.frame(predict(linearMod, work_data, se.fit = TRUE))
+#work_data<-cbind(work_data,test)
  
 
 #work_data$fit<-work_data$fit^(0.5)
@@ -105,6 +118,9 @@ work_data$net_to_grid<-work_data$consumptionEnergy-work_data$generationEnergy
 
 
 
+
+
+
 ggplot(subset(work_data,month==6 & day<16))+
   geom_line(aes(start,exportedEnergy),colour="red",size=2)+
   geom_line(aes(start,-importedEnergy),colour="blue",size=2)+
@@ -120,7 +136,10 @@ work_data$end<-work_data$start+hours(1)
 #work_data<-work_data[,-match(c("fit","se.fit","df","residual.scale"),names(work_data))]
 
 
-home_battery_graph<-function(start_date,battery_size){
+
+
+
+home_battery_graph<-function(start_date,battery_size=10){
   lims <- c(start_date,start_date+weeks(2))
   #lims <- c(min(work_data$start), max(work_data$start))
   
@@ -221,14 +240,19 @@ home_battery_graph<-function(start_date,battery_size){
 #call on battery
 
 batt_size<-13.5
-work_data<-subset(work_data,start<=min(start)+years(1)) #create a one year sample
+hourly_data<-hourly_data %>% rename(net_from_grid=net_to_grid)
+#work_data<-subset(work_data,start<=min(start)+years(1)) #create a one year sample
 
 summary_data_store<-data.frame()
 #for(batt_size in c(seq(0,30,by=5),13.5,26.5)){
-for(batt_size in 26){
-  batt_in<- - 5
-  batt_out<-5
-  init_charge<-0
+for(batt_size in 36){
+  work_data<-hourly_data %>% filter(start>ymd("2021-03-31"),start<=ymd("2022-04-01"))%>%mutate(generationEnergy=generationEnergy*1.16,
+  net_from_grid=consumptionEnergy-generationEnergy
+  )
+  #batt_size<-13*400
+  batt_in<- - 10
+  batt_out<-10
+  init_charge<-35
   batt_eff<-.9
   #batt_eff<-1
   elec_price<-.05
@@ -289,6 +313,118 @@ for(batt_size in 26){
   
 
   }
+
+
+
+cycles<-work_data %>% group_by(date)%>%
+  summarize(cycle=max(batt_charge)-min(batt_charge))
+
+top_panel<-ggplot(work_data) +
+  geom_line(aes(time,net_imp,colour="Net Consumption"),size=2) +
+  geom_line(aes(time,batt_pwr,colour="Battery Flow"),size=2)+
+  scale_colour_manual("",values = colors_tableau10(),labels = c("Battery Charge (+) or\nDischarge (-) State or Flows", "Purchases (+) or Sales (-)\nof Electricity","Purchases (+) or Sales (-) \nof Electricity w/o Battery"))+
+  scale_y_continuous()+
+  #scale_color_viridis("",option="C",labels = c("Battery Charge (+) or\nDischarge (-) State or Flows", "Purchases (+) or Sales (-)\nof Electricity","Purchases (+) or Sales (-) \nof Electricity w/o Battery"),discrete = TRUE)+
+  #scale_color_viridis("",labels = c("Battery\nCharge","Consumption","Net Electricity\nPurchases","Solar\nGeneration"),discrete = TRUE,option="C")+
+  scale_x_datetime()+
+  theme_minimal()+
+  theme(legend.position="bottom",
+        legend.margin=margin(c(0,0,0,0),unit="cm"),
+        legend.text = element_text(colour="black", size = 12, face = "bold"),
+  )+
+  labs(y="Energy Flows (kWh)",x="",
+       title=paste("Household Energy Shapes with ",batt_size,"KWh of Eguana Technologies Storage Capacity",sep=""),
+       #subtitle=paste(month.name[month(start_date)]," ",day(start_date),", ",year(start_date)," to ",month.name[month(end_date)]," ",day(end_date),", ",year(end_date),sep="")
+   NULL
+   )
+print(top_panel)
+
+
+bottom_panel<-ggplot(work_data) +
+  geom_line(aes(start,batt_charge,colour="Battery Charge"),size=2)+
+  #scale_color_viridis("",option="C",labels = c("Battery\nCharge"),discrete = TRUE)+
+  scale_colour_manual("",values = colors_tableau10(),labels = c("Battery Charge (+) or\nDischarge (-) State or Flows", "Purchases (+) or Sales (-)\nof Electricity","Purchases (+) or Sales (-) \nof Electricity w/o Battery"))+
+  scale_x_datetime()+
+  #scale_y_continuous(limits = c(0,round(batt_size/10)*10))+
+  #scale_y_continuous(limits = c(0,round(batt_size/10+1)*10))+
+  #scale_y_continuous(limits = c(0,26.1))+
+  theme_minimal()+theme(    
+    legend.position = "bottom",
+    plot.caption = element_text(size = 12, face = "italic"),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(size = 16, face = "italic"),
+    panel.grid.minor = element_blank(),
+    text = element_text(size = 16,face = "bold"),
+    axis.text = element_text(size = 12,face = "bold", colour="black")
+  )+    labs(y="Battery Charge (kWh)",x="")
+#caption="Source: SolarPeople system data via Neurio API\nGraph by Andrew Leach")
+
+print(bottom_panel)
+
+#extract legend
+#https://github.com/hadley/ggplot2/wiki/Share-a-legend-between-two-ggplot2-graphs
+g_legend<-function(a.gplot){
+  tmp <- ggplot_gtable(ggplot_build(a.gplot))
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+  legend <- tmp$grobs[[leg]]
+  return(legend)}
+
+mylegend<-g_legend(top_panel)
+
+png<-1
+if(png==1)
+  set_png(file=paste("home_battery",month(start_date),"_",day(start_date),".png",sep=""))
+grid.arrange(arrangeGrob(top_panel + theme(legend.position="none",
+                                           legend.margin=margin(c(0,0,0,0),unit="cm"),
+                                           legend.text = element_text(colour="black", size = 14, face = "bold"),
+                                           plot.caption = element_text(size = 12, face = "italic"),
+                                           plot.title = element_text(face = "bold"),
+                                           plot.subtitle = element_text(size = 14, face = "italic"),
+                                           panel.grid.minor = element_blank(),
+                                           text = element_text(size = 12,face = "bold"),
+                                           axis.text = element_text(size = 12,face = "bold", colour="black"),
+                                           axis.text.x = element_blank()
+),
+bottom_panel + theme(legend.position="none",
+                     plot.caption = element_text(size = 12, face = "italic"),
+                     plot.title = element_text(face = "bold"),
+                     plot.subtitle = element_text(size = 16, face = "italic"),
+                     panel.grid.minor = element_blank(),
+                     text = element_text(size = 12,face = "bold"),
+                     axis.text = element_text(size = 12,face = "bold", colour="black")
+),
+ncol=1,heights=c(3,1.75)),
+mylegend, nrow=2,heights=c(10, 1),bottom =text_grob(
+  "Source: SolarPeople system data via Neurio API, graph and battery simulation by Andrew Leach",
+  face = "italic", color = "black",size=14,just="center",lineheight = 1
+)
+)
+
+if(png==1)#set these to only turn on if you're making PNG graphs
+  dev.off()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
