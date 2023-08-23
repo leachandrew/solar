@@ -18,14 +18,6 @@ sensor_id <- "0x0000C47F510354AE"
 neurio_api <- GET("https://api.neur.io/v1/status")
 neurio_r <- fromJSON(rawToChar(neurio_api$content))
 
-#backup
-#backup_id<-"Ar99xfgNRdWYGn7ovp-VFw"
-#backup_secret<-"g7vmO0uNT32Y6xZIOQdZpQ"
-#token_id<- get_token(backup_id,backup_secret)
-
-
-
-
 get_token<-function(client_id,client_secret){
   neurio.data <- data.frame(client_id,client_secret)
   # Use authorisation code to get (temporary) access token
@@ -42,18 +34,6 @@ get_token<-function(client_id,client_secret){
   
   return(token_data$access_token)
   }
-
-
-#token_id<-"AIOO-2mxvJ42jWrVuwmFKPzHNmcxady7V7gACklOFPGLXm-D1f4hRR9ECcYRD7vIBZyDhHeYtqw6R2gJZ8F1Gh0ysVyu8q05Xf_y4LlJmoU9q21n_0PtE-z7i3NbGFfYlDYMa-6fLw7YX-ogc61JTG3Lpq3M82SUm_EJKIvsfHIB1g7WNMvDW00MV5Qn6rZaPeDqJnsRVf9_qpry0AznNU_bGXLg5XWrjKky_VaRtJo0Zu2k2fRzlgmq7ZkLPTS6K2S6Wqf_E6b_"
-
-
-
-
-#call that works, stored in case I mess up the other ones.
-#test<-httr::VERB(verb = "GET", url = "https://api.neur.io/v1/samples/stats?sensorId=0x0000C47F510354AE&start=2017-08-16T10:00:00Z&end=2017-08-17T03:00:00Z&granularity=minutes&frequency=5&timezone=America/Edmonton", 
-#                       httr::add_headers(Authorization = "Bearer AIOO-2nAWDW89l_OJHK4wnuOKi_paoTLxKREWXZQuSLpefCSAhfxbeIslCQyQ8VXBiyvfRq3mlXOFLOu8clU31RN5l6B9YayQlP35VV12jtmrfueoWfabUfNtRl4HwNoNqeKxnxnlp7gl4zp-c4scD40OF-yZQgMZvf85Fzk7NXqycVBRC1EX7zjdKqjLyQsHRa2XhRzfgZSIxFMBcjZI-Rr_m6xq3dP3Tufp6rlaEVoViVyp24I3YCu9ndBSdg3fRUtyRN7nKgz"), 
-#                       encode = "json")
-
 
 
 get_neurio<-function(start_string,end_string,time_unit,time_freq,sensor_id,token_id)
