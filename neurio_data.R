@@ -19,13 +19,13 @@ neurio_r <- fromJSON(rawToChar(neurio_api$content))
 
 #save(list = c("my_client_id", "my_client_secret","sensor_id"), file = "neurio_credentials.Rdata")
 
-#load(file = "neurio_credentials.Rdata")
-load(file = "neurio_cred_backup.Rdata")
+#load(file = "../neurio_credentials.Rdata")
+load(file = "../neurio_cred_backup.Rdata")
 
 #simon and peter's systems
 
-#load(file = "simon_neurio_credentials.Rdata")
-#load(file = "solar_homes_neurio_credentials.Rdata")
+#load(file = "../simon_neurio_credentials.Rdata")
+#load(file = "../solar_homes_neurio_credentials.Rdata")
 
 
 source("neurio_scripts.R")
@@ -247,11 +247,11 @@ ggsave(filename = "monthly_pool_value.png",dpi=300, width = 16,height = 7,bg="wh
 p<-ggplot(df1)+
   geom_hline(aes(yintercept=0),color="black",size=rel(1.25))+
   #geom_line(data=hourly_data%>%mutate(month=factor(month.abb[month])),aes(he,generationEnergy,group=date),colour="black",size=rel(.025),alpha=.18)+
-  geom_line(aes(he,gen,colour=factor(year),group=factor(year)),size=rel(1.25))+
+  geom_line(aes(he,gen,colour=factor(year),group=factor(year)),size=rel(1.5))+
   facet_wrap(~month,nrow = 2)+
   #scale_linetype_manual("",values=c("solid","31"),labels=c("Solar Generation","Net Consumption"))+
-  scale_color_viridis("",discrete=TRUE,option = "D")+
-  scale_x_continuous(expand=c(0,0),breaks=c(8,12,18,22))+
+  scale_color_manual("",values=colors_ua10())+
+  scale_x_continuous(expand=c(0,0),breaks=c(0,6,12,18))+
   scale_y_continuous(expand=c(0,0),breaks=pretty_breaks())+
   expand_limits(y=7)+
   theme_classic()+theme(text=element_text(size=21),
@@ -259,27 +259,28 @@ p<-ggplot(df1)+
   labs(x="Hour Ending",y="Hourly Generation (kWh)",
        title="Monthly Solar Generation Patterns",
        subtitle="August, 2017-present hourly average values",
-       caption="Source: SolarPeople system data via Neurio API\nGraph by Andrew Leach")
+       caption="Source: System data via Neurio API, graph by Andrew Leach")
 print(p)
 ggsave(filename = "hourly_gen_only.png",dpi=300, width = 16,height = 7,bg="white")
 
 
-p<-ggplot(df1)+
+p<-ggplot(df1%>% group_by(month,he)%>%summarise(gen=mean(gen,na.rm=T)))+
   geom_hline(aes(yintercept=0),color="black",size=rel(1.25))+
-  geom_line(data=hourly_data%>%mutate(month=factor(month.abb[month])),aes(he,generationEnergy,group=date),colour="black",size=rel(.0025),alpha=.18)+
-  geom_line(aes(he,gen,colour=factor(year),group=factor(year)),size=rel(1.25))+
+  geom_line(data=hourly_data%>%mutate(month=factor(month.abb[month])),aes(he,generationEnergy,group=date),colour="grey50",size=rel(.25),alpha=.25)+
+  geom_line(aes(he,gen,color="Monthly Average",group=factor(month)),size=rel(1.25))+
   facet_wrap(~month,nrow = 2)+
   #scale_linetype_manual("",values=c("solid","31"),labels=c("Solar Generation","Net Consumption"))+
-  scale_color_viridis("",discrete=TRUE,option = "D")+
-  scale_x_continuous(expand=c(0,0),breaks=c(8,12,18,22))+
+  #scale_color_viridis("",discrete=TRUE,option = "D")+
+  scale_color_manual("",values=blakes_blue)+
+  scale_x_continuous(expand=c(0,0),breaks=c(0,6,12,18,24))+
   scale_y_continuous(expand=c(0,0),breaks=pretty_breaks())+
-  expand_limits(y=7)+
+  expand_limits(y=0)+
   theme_classic()+theme(text=element_text(size=21),
                         legend.key.width = unit(2,"cm"),legend.position = "bottom")+
   labs(x="Hour Ending",y="Hourly Generation (kWh)",
        title="Monthly Solar Generation Patterns",
        subtitle="August, 2017-present hourly average values",
-       caption="Source: SolarPeople system data via Neurio API\nGraph by Andrew Leach")
+       caption="Source: System data via Neurio API, graph by Andrew Leach")
 print(p)
 ggsave(filename = "hourly_gen_spag.png",dpi=150, width = 16,height = 7)
 
@@ -307,7 +308,7 @@ ggsave(filename = "hourly_cons_spag.png",dpi=150, width = 16,height = 9)
 
 p<-ggplot(df1)+
   geom_hline(aes(yintercept=0),color="black",size=rel(1.25))+
-  geom_line(data=hourly_data%>%mutate(month=factor(month.abb[month])),aes(he,-net_to_grid,group=date),colour="black",size=rel(.025),alpha=.18)+
+  geom_line(data=hourly_data%>%mutate(month=factor(month.abb[month])),aes(he,-net_to_grid,group=date),colour="grey50",size=rel(.25),alpha=.25)+
   geom_line(aes(he,-net,colour=factor(year),group=factor(year)),size=rel(1.25))+
   facet_wrap(~month,nrow = 2)+
   scale_color_viridis("",discrete=TRUE,option = "D")+
@@ -322,17 +323,18 @@ p<-ggplot(df1)+
        subtitle="August, 2017-present hourly average values",
        caption="Source: SolarPeople system data via Neurio API\nGraph by Andrew Leach")
 print(p)
-ggsave(filename = "hourly_net_spag.png",dpi=150, width = 16,height = 7)
+ggsave(filename = "hourly_net_spag.png",dpi=300, width = 16,height = 7,bg="white")
 
 
 
-
-p<-ggplot(df1%>%mutate(clock=factor(paste(he,":00",sep=""),levels=paste(seq(1,24),":00",sep=""))))+
+p<-ggplot(df1%>%mutate(clock=factor(paste(he,":00",sep=""),levels=paste(seq(1,24),":00",sep="")))%>%
+            group_by(month,clock)%>%summarize(net=mean(net,na.rm=T)))+
   geom_hline(aes(yintercept=0),color="black",size=rel(1.25))+
-  geom_line(aes(clock,net,colour=factor(year),group=factor(year)),size=rel(1.25))+
+  geom_line(data=hourly_data%>%mutate(month=factor(month.abb[month])),aes(he,net_to_grid,group=date),colour="grey50",size=rel(.25),alpha=.25)+
+  geom_line(aes(clock,net,colour="Monthly Average",group=month),size=rel(1.25))+
   facet_wrap(~month,nrow = 2)+
-  scale_color_viridis("",discrete=TRUE,option = "D")+
-  scale_x_discrete(expand=c(0,0),breaks=paste(seq(1,24,3),":00",sep=""))+
+  scale_color_manual("",values=blakes_blue)+
+  scale_x_discrete(expand=c(0,0),breaks=paste(seq(2,24,6),":00",sep=""))+
   scale_y_continuous(expand=c(0,0),breaks=pretty_breaks())+
   expand_limits(y=c(-4,2))+
   theme_classic()+theme(text=element_text(size=21),
@@ -342,9 +344,28 @@ p<-ggplot(df1%>%mutate(clock=factor(paste(he,":00",sep=""),levels=paste(seq(1,24
        title=paste("Daily Average Household Load Net of Solar (",year(min(hourly_data$start)),"-",year(max(hourly_data$start)),")",sep=
                      ""),
        subtitle="August, 2017-present hourly average values",
-       caption="Source: SolarPeople system data via Neurio API\nGraph by Andrew Leach")
+       caption="Source:System data via Neurio API, graph by Andrew Leach")
 print(p)
-ggsave(filename = "hourly_net.png",dpi=150, width = 16,height = 7)
+ggsave(filename = "hourly_net.png",dpi=300, width = 16,height = 7,bg="white")
+
+p<-ggplot(df1%>%mutate(clock=factor(paste(he,":00",sep=""),levels=paste(seq(1,24),":00",sep=""))))+
+  geom_hline(aes(yintercept=0),color="black",size=rel(1.25))+
+  geom_line(aes(clock,net,colour=factor(year),group=factor(year)),size=rel(1.25))+
+  facet_wrap(~month,nrow = 2)+
+  scale_color_viridis("",discrete=TRUE,option = "D")+
+  scale_x_discrete(expand=c(0,0),breaks=paste(seq(2,24,6),":00",sep=""))+
+  scale_y_continuous(expand=c(0,0),breaks=pretty_breaks())+
+  expand_limits(y=c(-4,2))+
+  theme_classic()+theme(text=element_text(size=21),
+                        legend.key.width = unit(2,"cm"),legend.position = "bottom",
+                        axis.text.x = element_text(angle = 90))+
+  labs(x="",y="Hourly Net Load (kWh)",
+       title=paste("Daily Average Household Load Net of Solar (",year(min(hourly_data$start)),"-",year(max(hourly_data$start)),")",sep=
+                     ""),
+       subtitle="August, 2017-present hourly average values",
+       caption="Source:System data via Neurio API, graph by Andrew Leach")
+print(p)
+ggsave(filename = "hourly_net.png",dpi=150, width = 16,height = 7,bg="white")
 
 
 p<-ggplot(df1%>%mutate(clock=factor(paste(he,":00",sep=""),levels=paste(seq(1,24),":00",sep=""))))+
