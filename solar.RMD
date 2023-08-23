@@ -19,11 +19,13 @@ output:
 ```{r prelims,message=FALSE,warning=FALSE,echo=FALSE,include=FALSE}
 library(tidyverse)
 library(lubridate)
+knitr::opts_chunk$set(echo=FALSE,message=FALSE,warning=FALSE)
+
 ```
 
 
 
-```{r load data,cache=TRUE}
+```{r load data,cache=TRUE,message=FALSE,warning=FALSE,echo=FALSE,include=FALSE}
 load_file<-"hourly_solar_data.RData"
 load(load_file,.GlobalEnv) 
 ```
@@ -92,7 +94,7 @@ knitr::include_graphics("hourly_net.png")
 
 ## Have you made it to net-zero electricity?
 
-We designed the system with net-zero electricity in mind, and we have made some changes in our house to reduce our electricity use since the system was installed. On the whole, we've reduced our electricity use by about as much as the shortfall in predicted solar generation, so we've come out pretty close to net zero overall. We had a couple of years in which we were really short, so we're unlikely to claw all of that back, but for the first full year, and the most recent two of six years we've had the system, we've generated more than we've used. In the first year, we made it to net zero, but barely, just a few watt-hours!
+We designed the system with net-zero electricity in mind, and we have made some changes in our house to reduce our electricity use since the system was installed. On the whole, we've reduced our electricity use by about as much as the shortfall in predicted solar generation, so we've come out pretty close to net zero overall. We had a couple of years in which we were really short, in part due to all of us being at home for so much of 2020-2022, so we're unlikely to claw all of that back. But for the first full year, and the most recent two of six years, we've generated more electricity than we've used. In the first year, we made it to net zero, but barely, just a few watt-hours!
 
 ```{r, out.width = "800px",fig.align="center",dpi=300}
 knitr::include_graphics("cumulative_net_year.png")
