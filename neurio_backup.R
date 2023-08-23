@@ -18,7 +18,6 @@ setwd("C:/Users/aleach/Google Drive")
 
 png<-0 #set to one to output to files, anything else to output to screen.
 
-#curl -i -X POST --data "grant_type=client_credentials&client_id=P8EEG3rvRxyqWd_beUBCJA&client_secret=ki6M5J_hTtiXuMAcHHPmtw" https://api.neur.io/v1/oauth2/token
 
 sensor_id <- "0x0000C47F510354AE"
 
@@ -30,30 +29,6 @@ neurio_api <- GET("https://api.neur.io/v1/status")
 neurio_r <- fromJSON(rawToChar(neurio_api$content))
 
 
-#command line for token
-#curl -i -X POST -H "Content-Type:application/x-www-form-urlencoded" -d "grant_type=client_credentials&client_id=P8EEG3rvRxyqWd_beUBCJA&client_secret=HWnpmXfqSymeG8Iqjp46Dg" "https://api.neur.io/v1/oauth2/token"
-
-my_client_id <- c("P8EEG3rvRxyqWd_beUBCJA")
-my_client_secret <- c("HWnpmXfqSymeG8Iqjp46Dg")
-
-
-#Simons system
-simon_sensor_id<-"0x0000C47F5103486D"
-simon_client_id<-"woE3Ank7Ty-zKp_QoT-1Yw"
-simon_client_secret<-"w6dldtcOSIS0QShj_ItL6g"
-
-#Peters system
-solar_homes_sensor_id<-"0x0000C47F510356F3"
-solar_homes_id<-"Kx-lCJ4uQqWkYAc4vI7K4Q"
-solar_homes_client_secret<-"E58OQwQxRcWCDvJs0Pje2Q"
-
-
-
-
-#backup
-backup_id<-"Ar99xfgNRdWYGn7ovp-VFw"
-backup_secret<-"g7vmO0uNT32Y6xZIOQdZpQ"
-token_id<- get_token(backup_id,backup_secret)
 
 
 

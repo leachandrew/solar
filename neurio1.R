@@ -34,7 +34,6 @@ set_png<-function(file_sent,w_sent=1400,h_sent=750,res_sent=130){
 }
 
 
-#curl -i -X POST --data "grant_type=client_credentials&client_id=P8EEG3rvRxyqWd_beUBCJA&client_secret=ki6M5J_hTtiXuMAcHHPmtw" https://api.neur.io/v1/oauth2/token
 
 sensor_id <- "0x0000C47F510354AE"
 
@@ -44,33 +43,6 @@ sensor_id <- "0x0000C47F510354AE"
 #status check, neurio API
 neurio_api <- GET("https://api.neur.io/v1/status")
 neurio_r <- fromJSON(rawToChar(neurio_api$content))
-
-
-#command line for token
-#curl -i -X POST -H "Content-Type:application/x-www-form-urlencoded" -d "grant_type=client_credentials&client_id=P8EEG3rvRxyqWd_beUBCJA&client_secret=HWnpmXfqSymeG8Iqjp46Dg" "https://api.neur.io/v1/oauth2/token"
-
-my_client_id <- c("P8EEG3rvRxyqWd_beUBCJA")
-my_client_secret <- c("HWnpmXfqSymeG8Iqjp46Dg")
-
-
-#Simons system
-simon_sensor_id<-"0x0000C47F5103486D"
-simon_client_id<-"woE3Ank7Ty-zKp_QoT-1Yw"
-simon_client_secret<-"w6dldtcOSIS0QShj_ItL6g"
-
-#Peters system
-solar_homes_sensor_id<-"0x0000C47F510356F3"
-solar_homes_id<-"Kx-lCJ4uQqWkYAc4vI7K4Q"
-solar_homes_client_secret<-"E58OQwQxRcWCDvJs0Pje2Q"
-
-
-
-
-#backup
-backup_id<-"Ar99xfgNRdWYGn7ovp-VFw"
-backup_secret<-"g7vmO0uNT32Y6xZIOQdZpQ"
-token_id<- get_token(backup_id,backup_secret)
-
 
 
 
@@ -93,15 +65,6 @@ get_token<-function(client_id,client_secret){
 
 
 #token_id<-"AIOO-2mxvJ42jWrVuwmFKPzHNmcxady7V7gACklOFPGLXm-D1f4hRR9ECcYRD7vIBZyDhHeYtqw6R2gJZ8F1Gh0ysVyu8q05Xf_y4LlJmoU9q21n_0PtE-z7i3NbGFfYlDYMa-6fLw7YX-ogc61JTG3Lpq3M82SUm_EJKIvsfHIB1g7WNMvDW00MV5Qn6rZaPeDqJnsRVf9_qpry0AznNU_bGXLg5XWrjKky_VaRtJo0Zu2k2fRzlgmq7ZkLPTS6K2S6Wqf_E6b_"
-
-
-
-
-#call that works, stored in case I mess up the other ones.
-#test<-httr::VERB(verb = "GET", url = "https://api.neur.io/v1/samples/stats?sensorId=0x0000C47F510354AE&start=2017-08-16T10:00:00Z&end=2017-08-17T03:00:00Z&granularity=minutes&frequency=5&timezone=America/Edmonton", 
-#                       httr::add_headers(Authorization = "Bearer AIOO-2nAWDW89l_OJHK4wnuOKi_paoTLxKREWXZQuSLpefCSAhfxbeIslCQyQ8VXBiyvfRq3mlXOFLOu8clU31RN5l6B9YayQlP35VV12jtmrfueoWfabUfNtRl4HwNoNqeKxnxnlp7gl4zp-c4scD40OF-yZQgMZvf85Fzk7NXqycVBRC1EX7zjdKqjLyQsHRa2XhRzfgZSIxFMBcjZI-Rr_m6xq3dP3Tufp6rlaEVoViVyp24I3YCu9ndBSdg3fRUtyRN7nKgz"), 
-#                       encode = "json")
-
 
 
 

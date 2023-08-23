@@ -1,5 +1,3 @@
-#curl -i -X POST --data "grant_type=client_credentials&client_id=P8EEG3rvRxyqWd_beUBCJA&client_secret=ki6M5J_hTtiXuMAcHHPmtw" https://api.neur.io/v1/oauth2/token
-
 library(tidyverse)
 library(readxl)
 library(httr)

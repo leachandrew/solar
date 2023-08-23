@@ -8,7 +8,6 @@ print(getwd())
 source("../andrew_base.R")
 
 
-#curl -i -X POST --data "grant_type=client_credentials&client_id=P8EEG3rvRxyqWd_beUBCJA&client_secret=ki6M5J_hTtiXuMAcHHPmtw" https://api.neur.io/v1/oauth2/token
 
 sensor_id <- "0x0000C47F510354AE"
 
@@ -1561,12 +1560,12 @@ test_data<-sys_data %>% left_join(forecast_data%>%select(time,actual_posted_pool
 #2018 Rider K 0.358 ?/kWh
 #2019 Rider K 0.203 ?/kWh
 #2020 Rider K 0.073 Â¢/kWh
-#2021 Rider K 0.331 ¢/kWh
+#2021 Rider K 0.331 ?/kWh
 
 #2018 Rider J -0.172 c/kWh
 #2019 Rider J +0.01 c/kWh
 #2020 Rider J: 0.168 Â¢/kWh.
-#2021 Rider J: 0.110 ¢/kWh
+#2021 Rider J: 0.110 ?/kWh
 
 #Rider G Balancing Pool
 #2021 Rider G $0.00238/kWh.
