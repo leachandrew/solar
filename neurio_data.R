@@ -4,7 +4,7 @@ library(httr)
 library(jsonlite)
 library(viridis)
 library(scales)
-
+library(janitor)
 sensor_id <- "0x0000C47F510354AE"
 
 #
@@ -122,7 +122,7 @@ elec_month<-daily_data %>% filter(start>=ymd("2019-05-01"))%>%
          source=fct_relevel(source,"Natural Gas"),
          source=fct_recode(source,"Natural Gas (Heat, Hot Water, and Cooking)"="Natural Gas"),
          date=ymd(paste(year,month,1,sep="-")))%>%
-  filter(date<ymd("2023-08-01"))%>%
+  filter(date<ymd("2024-01-01"))%>%
     mutate(year=factor(as.character(year)))%>%
     group_by(year,month)%>%
     mutate(net=sum(kwh),share=kwh/net)%>%
@@ -136,7 +136,7 @@ ggplot(home_energy_month)+
   scale_color_manual("",values=c("black","grey50"))+
   scale_y_continuous(expand=c(0,0),breaks = pretty_breaks())+
   scale_x_date(expand=c(0,0),breaks = pretty_breaks(n=8),date_labels = "%B\n%Y")+
-  expand_limits(x=ymd("2023-09-01"))+
+  expand_limits(x=ymd("2024-01-01"))+
   guides(fill=guide_legend(nrow =1,byrow=FALSE,label.theme=element_text(colour='black')),
          color=guide_legend(nrow =1,byrow=FALSE,label.theme=element_text(colour='black'))
          )+
@@ -152,6 +152,7 @@ ggplot(home_energy_month)+
     axis.text.y = element_text(size = 12, colour="black"),
     axis.text.y.right = element_text(margin = margin(t = 0, r = 10, b = 0, l = 2),color="red"),
     axis.title.y.right = element_text(margin = margin(t = 0, r = 10, b = 0, l = 2),color="red"),
+    plot.margin = margin(r=20,l=10,b=5),
     #axis.text.x = element_blank(),
     axis.text.x = element_text(size = 10, colour = "black", hjust=0.5,vjust=0.5),
     axis.title.y = element_text(size = 14, colour="black"),
@@ -217,7 +218,7 @@ df1 <- hourly_data %>%
                        date=ymd(paste(year,month,1,sep="-")))
 
 
-df2<-df1 %>% group_by(month,year,date)%>%summarize(value=sum(gen_value))%>%filter(date<ymd("2023-07-31"))
+df2<-df1 %>% group_by(month,year,date)%>%summarize(value=sum(gen_value))#%>%#filter(date<ymd("2023-07-31"))
 df2 %>% group_by(year)%>%summarize(value=sum(value))
 p<-
   ggplot(df2)+
@@ -366,9 +367,10 @@ print(p)
 ggsave(filename = "hourly_net.png",dpi=150, width = 16,height = 7,bg="white")
 
 
-p<-ggplot(df1%>%mutate(clock=factor(paste(he,":00",sep=""),levels=paste(seq(1,24),":00",sep=""))))+
+p<-
+  ggplot(df1%>%mutate(clock=factor(paste(he,":00",sep=""),levels=paste(seq(1,24),":00",sep=""))))+
   geom_hline(aes(yintercept=0),color="black",size=rel(1.25))+
-  geom_line(aes(clock,net*price,colour=factor(year),group=factor(year)),size=rel(1.25))+
+  geom_line(aes(clock,net*gen_value,colour=factor(year),group=factor(year)),size=rel(1.25))+
   facet_wrap(~month,nrow = 2)+
   scale_color_viridis("",discrete=TRUE,option = "D")+
   scale_x_discrete(expand=c(0,0),breaks=paste(seq(1,24,3),":00",sep=""))+
@@ -460,12 +462,11 @@ cumulative_graphs<-function(){
   
   df1 <- sys_data %>% group_by(date) %>% 
                   summarise(gen=sum(generationEnergy/12),imps=sum(importedEnergy/12),cons=sum(consumptionEnergy/12),net=sum(net_to_grid)/12) %>% #/12 because you're using 5 minute data scaled to kW ratings
-                  mutate(month=factor(month.abb[month(date)], levels = month.abb))%>%
+                  mutate(month=factor(month.abb[month(date)], levels = month.abb),year=as_factor(year(date)))%>%
     mutate(cum_net=cumsum(net), cum_gen=cumsum(gen),
            system_year=trunc(time_length(difftime(date,min(date)), "years"),0),
            system_year=paste(system_year+2017,system_year+2018,sep="-"),
            system_year=as_factor(system_year)
-           
            )
   
   cap_text<-paste("Source: Generation data via Neurio API, graph by Andrew Leach. From ",min_time," to ",max_time,", cumulative generation was ",
@@ -512,8 +513,9 @@ cumulative_graphs<-function(){
     #  scale_fill_viridis(discrete=TRUE)+
     #scale_x_discrete()+
     #scale_x_discrete(limits = c(0,23))+
-    #  scale_y_continuous(expand=c(.05,.05))+
-    scale_x_date(date_breaks="6 months",labels = date_format("%b\n%Y"))+
+    scale_y_continuous(expand=c(0,0))+
+    expand_limits(y=0)+
+    scale_x_date(date_breaks="6 months",labels = date_format("%b\n%Y"),expand=c(0,0))+
     theme_minimal()+theme(    
       legend.position = "bottom",
       legend.margin=margin(c(0,0,0,0),unit="cm"),
@@ -534,10 +536,11 @@ cumulative_graphs<-function(){
   ggsave("cumulative_gross_all.png",dpi=300, width = 16,height = 9,bg="white")
   
   
-  
-  p<-ggplot(
+ 
+  p<-
+    ggplot(
     #test<-
-      df1%>%filter(as.character(system_year)<max(as.character(system_year)),!(day(date)==29 & month(date)==2))%>%
+      df1%>%filter(as.character(system_year)<=max(as.character(system_year)),!(day(date)==29 & month(date)==2))%>%
               group_by(system_year)%>%
               mutate(n=row_number(),
                      old_date=date,
@@ -574,20 +577,65 @@ cumulative_graphs<-function(){
   ggsave("cumulative_net_year.png",dpi=300, width = 16,height = 9,bg="white")
   
   
-  p<-ggplot(
+  
+  p<-
+    ggplot(
+      #test<-
+      df1%>%#filter(as.character(system_year)<=max(as.character(system_year)),!(day(date)==29 & month(date)==2))%>%
+        group_by(year)%>%
+        mutate(n=row_number(),
+               #old_date=date,
+               date=ymd(paste(2000,month(date),day(date),sep="-")),
+               cum_net=cumsum(net)
+        )%>%
+        ungroup()%>%
+        #mutate(max_net=max(cum_net))
+        mutate(year=as_factor(year))
+        )+
+    #geom_smooth(aes(date,-net),method = "lm", formula = y ~ splines::bs(x, 3), se = TRUE)+
+    geom_line(aes(date,-cum_net,group=year,color=year),size=2)+
+    scale_color_manual("",values=colors_ua10())+
+    #  scale_fill_viridis(discrete=TRUE)+
+    #scale_x_discrete()+
+    #scale_x_discrete(limits = c(0,23))+
+    #  scale_y_continuous(expand=c(.05,.05))+
+    scale_x_date(labels = date_format("%b"),date_breaks = "1 month")+
+    guides(color=guide_legend(nrow=1))+
+    theme_minimal()+theme(    
+      legend.position = "bottom",
+      legend.margin=margin(c(0,0,0,0),unit="cm"),
+      legend.text = element_text(colour="black", size = 14, face = "bold"),
+      plot.caption = element_text(size = 12, face = "italic",hjust=0),
+      plot.title = element_text(face = "bold"),
+      plot.subtitle = element_text(size = 14, face = "italic"),
+      panel.grid.minor = element_blank(),
+      text = element_text(size = 14,face = "bold"),
+      axis.text = element_text(size = 14,face = "bold", colour="black")
+    )+
+    labs(x="",y="Cumulative Generation Surplus or Shortfall (kWh)",
+         title="Cumulative Solar Generation Net Surplus or Shortfall (2017-2023)",
+         subtitle="7.6 kW DC south-facing solar array in Edmonton, AB",
+         caption=paste("Source: System data via Neurio API, graph by Andrew Leach."))
+  print(p)
+  ggsave("cumulative_net_cal_year.png",dpi=300, width = 16,height = 9,bg="white")
+  
+  
+  
+  
+  p<-
+    ggplot(
     #test<-
-    df1%>%filter(as.character(system_year)<max(as.character(system_year)),!(day(date)==29 & month(date)==2))%>%
-      group_by(system_year)%>%
+    df1%>%filter(year!="2017")%>%
+      group_by(year)%>%
       mutate(n=row_number(),
              old_date=date,
-             false_year=year(date)-max(year(date)),
-             date=ymd(paste(2022+false_year,month(date),day(date),sep = "-")),
+             date=ymd(paste(2020,month(date),day(date),sep = "-")),
              cum_gen=cumsum(gen)
       )%>%
       ungroup()%>%
       mutate(max_net=max(cum_net)))+
     #geom_smooth(aes(date,-net),method = "lm", formula = y ~ splines::bs(x, 3), se = TRUE)+
-    geom_line(aes(date,cum_gen,group=system_year,color=system_year),size=2)+
+    geom_line(aes(date,cum_gen,group=year,color=year),size=2)+
     scale_color_manual("",values=colors_ua10())+
     #  scale_fill_viridis(discrete=TRUE)+
     #scale_x_discrete()+
@@ -616,10 +664,8 @@ cumulative_graphs<-function(){
   
   
   
-  
-  if(png==1)
-    set_png("cumulative_gross_year1.png")
-  p<-ggplot(df1)+
+  p<-
+    ggplot(df1%>%filter(date<min(date)+years(1)))+
     #geom_smooth(aes(date,-net),method = "lm", formula = y ~ splines::bs(x, 3), se = TRUE)+
     geom_line(aes(date,cum_gen),size=2)+
     #  scale_color_viridis("",discrete=TRUE)+
@@ -627,7 +673,7 @@ cumulative_graphs<-function(){
     #scale_x_discrete()+
     #scale_x_discrete(limits = c(0,23))+
     #  scale_y_continuous(expand=c(.05,.05))+
-    scale_x_datetime(limits = lims,date_breaks = "2 months",labels = date_format("%b %d\n%Y", tz="America/Denver"),expand = c(0,0))+
+    scale_x_date(date_breaks = "2 months",labels = date_format("%b\n%Y"),expand = c(0,0))+
     theme_minimal()+theme(    
       legend.position = "bottom",
       legend.margin=margin(c(0,0,0,0),unit="cm"),
@@ -642,79 +688,13 @@ cumulative_graphs<-function(){
     labs(x="Date",y="Cumulative Annual Generation (kWh)",
          title="Cumulative Solar Generation (Year 1, 2017-18)",
          subtitle="7.6 kW DC south-facing solar array in Edmonton, AB",
-         caption=paste("Source: SolarPeople system data via Neurio API, graph by Andrew Leach\n",
-                       "Total cumulative year 1 generation was ",round(max(df1$cum_gen[df1$date<=lims[2]])),"kWh.",
+         caption=paste("Source: SolarPeople system data via Neurio API, graph by Andrew Leach. ",
+                       "Total cumulative year 1 generation was ",round(max(df1$cum_gen[df1$date<min(df1$date)+years(1)])),"kWh.",
                        sep=""
          ))
   print(p)
-  if(png==1)
-    dev.off()  
-  
-  if(png==1)
-    set_png("cumulative_gross_year1.png")
-  p<-ggplot(df1)+
-    #geom_smooth(aes(date,-net),method = "lm", formula = y ~ splines::bs(x, 3), se = TRUE)+
-    geom_line(aes(date,cum_gen),size=2)+
-    #  scale_color_viridis("",discrete=TRUE)+
-    #  scale_fill_viridis(discrete=TRUE)+
-    #scale_x_discrete()+
-    #scale_x_discrete(limits = c(0,23))+
-    #  scale_y_continuous(expand=c(.05,.05))+
-    scale_x_datetime(limits = lims,date_breaks = "2 months",labels = date_format("%b %d\n%Y", tz="America/Denver"),expand = c(0,0))+
-    theme_minimal()+theme(    
-      legend.position = "bottom",
-      legend.margin=margin(c(0,0,0,0),unit="cm"),
-      legend.text = element_text(colour="black", size = 14, face = "bold"),
-      plot.caption = element_text(size = 12, face = "italic",hjust=0),
-      plot.title = element_text(face = "bold"),
-      plot.subtitle = element_text(size = 14, face = "italic"),
-      panel.grid.minor = element_blank(),
-      text = element_text(size = 14,face = "bold"),
-      axis.text = element_text(size = 14,face = "bold", colour="black")
-    )+
-    labs(x="Date",y="Cumulative Annual Generation (kWh)",
-         title="Cumulative Solar Generation (Year 1, 2017-18)",
-         subtitle="7.6 kW DC south-facing solar array in Edmonton, AB",
-         caption=paste("Source: SolarPeople system data via Neurio API, graph by Andrew Leach\n",
-                       "Total cumulative year 1 generation was ",round(max(df1$cum_gen[df1$date<=lims[2]])),"kWh.",
-                       sep=""
-         ))
-  print(p)
-  if(png==1)
-    dev.off()  
-  
-  
-  
-  #2020 cumulative
-  
-  system_start=date(min(hourly_data$start))
-  
-  df1 <- hourly_data %>% mutate(month=month(start),date=date(ymd_hms(start,tz="America/Denver")),
-                                system_year=factor(1+trunc(time_length(interval(start = min(date),end = date),unit = "years")))
-                                         
-                                ) %>%
-    group_by(date,month,year,system_year) %>% 
-    summarise(gen=sum(generationEnergy),imps=sum(importedEnergy),cons=sum(consumptionEnergy),net=sum(net_to_grid)) %>%
-    mutate(month=factor(month.abb[month], levels = month.abb)
-           )%>%
-    group_by(system_year)%>% mutate(day=row_number(),
-                                    false_date=system_start+days(row_number()),
-                                    cum_net=cumsum(net),
-                             cum_gen=cumsum(gen))%>%ungroup()
-  
-  
-  lims <- c(as.POSIXct(min(df1$date)),as.POSIXct(max(df1$date)))
-  
-  breaks<-seq.POSIXt(min(lims), max(lims), by="4 weeks")
-  
-  
-  min_time<-min(df1$date)
-  #min_time<-trunc(min(sys_data$start),"days")+ 60*60*24
-  #max_time<-max(sys_data$end)
-  max_time<-max(df1$date)
-  min_time<-format(min_time,"%H:%M on %b %d, %Y")
-  max_time<-format(max_time,"%H:%M on %b %d, %Y")
-  
+  ggsave("cumulative_gross_year1.png",dpi=300, width = 16,height = 9,bg="white")
+
   cap_text<-paste("Source: Generation data via Neurio API, graph by Andrew Leach. From ",min_time," to ",max_time,", cumulative generation was ",
                   round(sum(df1$gen)),"kWh and net deliveries ",ifelse(sum(df1$net)>0,"from","to")," the grid were ",
                   abs(round(sum(df1$net))),"kWh."
@@ -722,9 +702,21 @@ cumulative_graphs<-function(){
   
   cap_text<-paste(strwrap(cap_text,width=116), collapse="\n")
   
-  p<-ggplot(df1)+
+  p<-
+    ggplot(
+      #test<-
+        df1%>%
+             group_by(year)%>%
+             mutate(n=row_number(),
+                    #old_date=date,
+                    date=ymd(paste(2020,month(date),day(date),sep = "-")),
+                    cum_gen=cumsum(gen),
+                    cum_net=cumsum(net)
+                    
+           )
+        )+
     #geom_smooth(aes(date,-net),method = "lm", formula = y ~ splines::bs(x, 3), se = TRUE)+
-    geom_line(aes(false_date,-cum_net,group=system_year,color=system_year),size=2)+
+    geom_line(aes(date,-cum_net,group=year,color=year),size=2)+
     scale_color_viridis("System Year",discrete=TRUE)+
     #  scale_fill_viridis(discrete=TRUE)+
     #scale_x_discrete()+
@@ -754,13 +746,14 @@ cumulative_graphs<-function(){
   
   p<-ggplot(df1)+
     #geom_smooth(aes(date,-net),method = "lm", formula = y ~ splines::bs(x, 3), se = TRUE)+
-    geom_line(aes(false_date,cum_gen,group=system_year,color=system_year),size=2)+
+    geom_line(aes(date,-cum_net/1000,group=system_year,color=system_year),size=2)+
     scale_color_viridis("System Year",discrete=TRUE)+
     #  scale_fill_viridis(discrete=TRUE)+
     #scale_x_discrete()+
     #scale_x_discrete(limits = c(0,23))+
     #  scale_y_continuous(expand=c(.05,.05))+
-    scale_x_date(breaks=date_breaks(width = "1 month"),labels = date_format("%b"),expand = c(0,0))+
+    scale_x_date(breaks=date_breaks(width = "1 year"),labels = date_format("%b\n%Y"),expand = c(0,0))+
+    expand_limits(x=max(df1$date+days(30)))+
     theme_minimal()+theme(    
       legend.position = "bottom",
       legend.margin=margin(c(0,0,0,0),unit="cm"),
@@ -772,15 +765,15 @@ cumulative_graphs<-function(){
       text = element_text(size = 14,face = "bold"),
       axis.text = element_text(size = 14,face = "bold", colour="black")
     )+
-    labs(x="",y="Annual Generation (kWh)",
-         title="Cumulative Solar Generation (2017-22)",
+    labs(x="",y="Cumulative Generation Surplus or Shortfall (MWh)",
+         title="Cumulative Solar Shortfall (2017-24)",
          subtitle="7.6 kW DC south-facing solar array in Edmonton, AB",
-         caption=paste("Source: SolarPeople system data via Neurio API, graph by Andrew Leach\n",
-                       "Maximum cumulative generation for 2017-2022 was ",round(max(df1$cum_gen)),"kWh",
+         caption=paste("Source: System data via Neurio API, graph by Andrew Leach. ",
+                       "Total cumulative generation shortfall is ",round(last(df1$cum_net)/1000,2)," MWh",
                        sep=""
          ))
   print(p)
-  ggsave(file="annual_gen.png",dpi = 450,width = 13,height=6,bg="White")
+  ggsave(file="annual_surplus.png",dpi = 450,width = 13,height=6,bg="White")
   
   
   
