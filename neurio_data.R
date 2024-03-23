@@ -122,7 +122,7 @@ elec_month<-daily_data %>% filter(start>=ymd("2019-05-01"))%>%
          source=fct_relevel(source,"Natural Gas"),
          source=fct_recode(source,"Natural Gas (Heat, Hot Water, and Cooking)"="Natural Gas"),
          date=ymd(paste(year,month,1,sep="-")))%>%
-  filter(date<ymd("2024-01-01"))%>%
+  filter(date<ymd("2024-03-01"))%>%
     mutate(year=factor(as.character(year)))%>%
     group_by(year,month)%>%
     mutate(net=sum(kwh),share=kwh/net)%>%
@@ -214,38 +214,34 @@ ggsave("household_use_2023.png",width = 15,height = 9,dpi=200,bg="white")
 
 
 
-
-test<-home_energy_month %>% #arrange(date)%>%#filter(source %in% c("Solar Power","Solar Exports"))%>%
-  group_by(source)%>%
-  summarize(kwh=sum(kwh))
-  #group_by(year)%>%
-  #mutate(short=cumsum(kwh))
-
-
-daily_data %>% filter(start>=ymd("2019-05-01"))%>%
-  summarize(gen=sum(generationEnergy))
-
-
-ggplot(home_gas_month%>%filter(as.character(year)>=2019))+
-  geom_line(aes(month,kwh,group=year,color=year))
-
-
-
-
-daily_merge<-daily_data %>% left_join(home_energy_data,by=c("start"="date")) 
-
-
-
-# write_csv(hourly_data%>%
-#             select(-net_to_grid,-year,-month,-hour,-he,-day,-date)%>% 
-#             pivot_longer(-c(start,end),names_to = "measure",values_to="value")%>%
-#             filter(!is.na(value))%>%
-#             mutate(start=as.POSIXct(start,tz="America/Denver"),
-#                    end=as.POSIXct(start,tz="America/Denver")),
-#           "../../Courses/econ_366_w23/resources/hourly_solar.csv")
-
-
-
+# 
+# test<-home_energy_month %>% #arrange(date)%>%#filter(source %in% c("Solar Power","Solar Exports"))%>%
+#   group_by(source)%>%
+#   summarize(kwh=sum(kwh))
+#   #group_by(year)%>%
+#   #mutate(short=cumsum(kwh))
+# 
+# 
+# daily_data %>% filter(start>=ymd("2019-05-01"))%>%
+#   summarize(gen=sum(generationEnergy))
+# 
+# 
+# 
+# 
+# daily_merge<-daily_data %>% left_join(home_energy_data,by=c("start"="date")) 
+# 
+# 
+# 
+# # write_csv(hourly_data%>%
+# #             select(-net_to_grid,-year,-month,-hour,-he,-day,-date)%>% 
+# #             pivot_longer(-c(start,end),names_to = "measure",values_to="value")%>%
+# #             filter(!is.na(value))%>%
+# #             mutate(start=as.POSIXct(start,tz="America/Denver"),
+# #                    end=as.POSIXct(start,tz="America/Denver")),
+# #           "../../Courses/econ_366_w23/resources/hourly_solar.csv")
+# 
+# 
+# 
 
 
 
@@ -294,7 +290,7 @@ p<-ggplot(df1)+
   geom_line(aes(he,gen,colour=factor(year),group=factor(year)),size=rel(1.5))+
   facet_wrap(~month,nrow = 2)+
   #scale_linetype_manual("",values=c("solid","31"),labels=c("Solar Generation","Net Consumption"))+
-  scale_color_manual("",values=colors_ua10())+
+  scale_color_manual("",values=colors_tableau10())+
   scale_x_continuous(expand=c(0,0),breaks=c(0,6,12,18))+
   scale_y_continuous(expand=c(0,0),breaks=pretty_breaks())+
   expand_limits(y=7)+
@@ -596,7 +592,7 @@ cumulative_graphs<-function(){
         mutate(max_net=max(cum_net)))+
     #geom_smooth(aes(date,-net),method = "lm", formula = y ~ splines::bs(x, 3), se = TRUE)+
     geom_line(aes(date,-cum_net,group=system_year,color=system_year),size=2)+
-    scale_color_manual("",values=colors_ua10())+
+    scale_color_manual("",values=colors_tableau10())+
     #  scale_fill_viridis(discrete=TRUE)+
     #scale_x_discrete()+
     #scale_x_discrete(limits = c(0,23))+
@@ -639,7 +635,7 @@ cumulative_graphs<-function(){
         )+
     #geom_smooth(aes(date,-net),method = "lm", formula = y ~ splines::bs(x, 3), se = TRUE)+
     geom_line(aes(date,-cum_net,group=year,color=year),size=2)+
-    scale_color_manual("",values=colors_ua10())+
+    scale_color_manual("",values=colors_tableau10())+
     #  scale_fill_viridis(discrete=TRUE)+
     #scale_x_discrete()+
     #scale_x_discrete(limits = c(0,23))+
@@ -1287,116 +1283,8 @@ sys_data<-sys_data %>%filter(year(end)!=2021)
 
 
 
-
-
-
-hourly_patterns<-function(){
-
-    
-df1 <- sys_data %>% filter(year(start)>2018)%>% mutate(time=cut(start, breaks = "30 min")) %>%
-     group_by(year,month,time) %>% summarise(gen=mean(generationEnergy),imps=mean(importedEnergy),cons=mean(consumptionEnergy),net=mean(net_to_grid))
-df1$month = factor(month.abb[df1$month], levels=month.abb[])
-
-df1$month_test<-paste(as.character(df1$month),df1$year,sep="-")
-df1$month_test = factor(df1$month_test,levels=unique(df1$month_test))
-
-print(levels(df1$month_test))
-
-breaks=unique(df1$time)[seq(1, length(unique(df1$time)), 12) ]
-
-png<-1
-if(png==1)
-  set_png("hourly_gen.png")
-
-p<-ggplot(df1)+
-  geom_line(aes(time,gen,colour=month_test,group=month_test),size=2)+
-  scale_color_viridis("",discrete=TRUE)+
-  scale_x_discrete(expand=c(0,0),breaks=breaks)+
-  scale_y_continuous(expand=c(0,0))+
-  ajl_line()+theme(axis.text.x=element_text(angle = -45, hjust = 0))+
-  labs(x="Time",y="Generation (kW)",
-       title="Monthly Solar Generation (2017-18 Avg)",
-       caption="Source: SolarPeople system data via Neurio API\nGraph by Andrew Leach")
-print(p)
-if(png==1)
-  dev.off()
-
-png<-1
-if(png==1)
-  set_png("hourly_jan_may.png")
-p<-ggplot(filter(df1,(month=="Jan" | month=="May"),year=="2018"))+
-  geom_line(aes(time,gen,colour=month_test,group=month_test),size=2)+
-  scale_color_viridis("",discrete=TRUE)+
-  scale_x_discrete(expand=c(0,0),breaks=breaks)+
-  scale_y_continuous(expand=c(0,0))+
-  ajl_line()+theme(axis.text.x=element_text(angle = -45, hjust = 0))+
-  labs(x="Time",y="Hourly Generation (kW)",
-       title="Monthly Solar Generation (2017-18 Avg)",
-       caption="Source: SolarPeople system data via Neurio API\nGraph by Andrew Leach")
-print(p)
-if(png==1)
-  dev.off()
-
-
-
-png<-1
-if(png==1)
-  set_png("cons_jan_may.png")
-p<-ggplot(subset(df1,month=="Jan" | month=="May"))+
-  geom_line(aes(time,cons,colour=month_test,group=month_test),size=2)+
-  scale_color_viridis("",discrete=TRUE)+
-  scale_x_discrete(expand=c(0,0),breaks=breaks)+
-  scale_y_continuous(expand=c(0,0))+
-  ajl_line()+theme(axis.text.x=element_text(angle = -45, hjust = 0))+
-  labs(x="Time",y="Average Power Use (kW)",
-       title="Electricity Use (Monthly Average)",
-       caption="Source: SolarPeople system data via Neurio API\nGraph by Andrew Leach")
-print(p)
-if(png==1)
-  dev.off()
-
-png<-1
-if(png==1)
-  set_png("net_jan_may.png")
-p<-ggplot(subset(df1,month=="Jan" | month=="May"))+
-  geom_line(aes(time,net,colour=month_test,group=month_test),size=2)+
-  geom_hline(aes(yintercept=0),size=1,colour="black")+
-  scale_color_viridis("",discrete=TRUE)+
-  scale_x_discrete(expand=c(0,0),breaks=breaks)+
-  scale_y_continuous(expand=c(0,0))+
-  ajl_line()+theme(axis.text.x=element_text(angle = -45, hjust = 0))+
-  labs(x="Time",y="Power Use Net of Solar Generation (kW)",
-       title="Hourly Net Electricity Use (Monthly Average)",
-       caption="Source: SolarPeople system data via Neurio API\nGraph by Andrew Leach")
-print(p)
-if(png==1)
-  dev.off()
-
-png<-1
-if(png==1)
-  set_png("net_all.png")
-p<-ggplot(df1)+
-  geom_line(aes(time,net,colour=month_test,group=month_test),size=2)+
-  geom_hline(aes(yintercept=0),size=1,colour="black")+
-  scale_color_viridis("",discrete=TRUE)+
-  scale_x_discrete(expand=c(0,0),breaks=breaks)+
-  scale_y_continuous(expand=c(0,0))+
-  ajl_line()+theme(axis.text.x=element_text(angle = -45, hjust = 0))+
-  labs(x="Time",y="Power Use Net of Solar Generation (kW)",
-       title="Hourly Net Electricity Use (Monthly Average)",
-       caption="Source: SolarPeople system data via Neurio API\nGraph by Andrew Leach")
-print(p)
-if(png==1)
-  dev.off()
-
-}
-#load_and_update()
-hourly_patterns()
-
-
-
 fun_graphs<-function(){
-load_and_update()
+#load_and_update()
 day_list<-seq.Date(from=as.Date("2018-05-29"),to=as.Date("2018-05-30"),by="1 day")
 
 df1 <- sys_data %>% filter(as.Date(date) %in% day_list) %>% group_by(date,hour,month,year) %>% summarise(gen=mean(generationEnergy),imps=mean(importedEnergy),cons=mean(consumptionEnergy),net=mean(net_to_grid))
@@ -2120,6 +2008,7 @@ rro_data<-rro_data %>% mutate(
     (year== 2022)~ 0.03462,
     (year== 2023)&(month<= 6)~ 0.03834,
     (year== 2023)&(month>= 6)~ 0.03927,
+    (year== 2024)~ 0.03907,
     
   ),
   distribution_var=case_when(
@@ -2130,6 +2019,7 @@ rro_data<-rro_data %>% mutate(
     (year==2021)~0.01036,
     (year==2022)~0.01043,
     (year==2023)~0.01643,
+    (year==2024)~0.01752,
   ),
   
   rider_dj=case_when(
@@ -2158,6 +2048,7 @@ rider_k=case_when(
   (year==2023) & (month %in% seq(1,3)) ~ 1.395/100,
   (year==2023) & (month %in% seq(4,6)) ~ .607/100,
   (year==2023) & (month %in% seq(7,9)) ~ .015/100,
+  (year==2024)~ -0.00131,
   TRUE~0
   ),
 
@@ -2170,6 +2061,7 @@ rider_j=case_when(
   (year==2021)~ 0.00110,
   (year==2022)~ -0.00125,
   (year==2023) ~ 0.00057,
+  (year==2024) ~ 0.00165,
   TRUE~0
   ),
     #Rider G Balancing Pool checked
@@ -2181,6 +2073,7 @@ rider_g=case_when(
   (year==2021) ~ 0.00238,
   (year==2022) ~ 0.00228,
   (year==2023) ~ 0.00228,
+  (year==2024) ~ 0.00135,
   TRUE~0
 ),
 #local access fee
@@ -2192,6 +2085,7 @@ laf=case_when(
   (year==2021) ~ 0.0097,
   (year==2022) ~ 0.0099,
   (year==2023) ~ 0.0105,
+  (year==2024) ~ 0.011099,
   TRUE~0
 ),
 dist_daily=case_when(
@@ -2202,6 +2096,7 @@ dist_daily=case_when(
     (year==2021) ~ 0.71057,
     (year==2022) ~ 0.71445,
     (year==2023) ~ 0.66988,
+    (year==2024) ~ 0.71612,
     TRUE~0
   ),
 bill_fixed=dist_daily*days_in_month(date),
@@ -2299,7 +2194,7 @@ scale_x_date(date_breaks = "3 months",date_labels =  "%b\n%Y",expand=c(0,0))+
   )+    labs(y="Monthly Variable Costs ($)",x="",
              title="Variable costs of household electricity, with and without solar",
              subtitle="Includes energy charges, variable portion of transmission and distribution charges, as well as variable rate riders",
-             caption=paste("Average monthly savings from solar and contract prices for the period shown vs consumption billed at regulated (RRO) rates: ", sprintf("$%.2f",mean(merged_data$savings[merged_data$contract=="My Contract Prices w Solar"])),"\nSources: Household power data via Neurio API, rate riders from EPCOR, RRO rates from Alberta's Utilities Consumer Advocate.\nCalculations and graph by Andrew Leach. RRO= Regulated Rate Option prices.",sep=""))
+             caption=paste("Average monthly savings of ", sprintf("$%.2f",mean(merged_data$savings))," from solar and contract prices for the period shown vs consumption billed at regulated (RRO) rates.\nSources: Household power data via Neurio API, rate riders from EPCOR, RRO rates from Alberta's Utilities Consumer Advocate. Calculations and graph by Andrew Leach.",sep=""))
 ggsave("power_costs.png",width = 16,height = 10,dpi=220,bg="white")
 
 
