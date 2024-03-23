@@ -169,6 +169,51 @@ ggplot(home_energy_month)+
 
 ggsave("household_use.png",width = 15,height = 9,dpi=200,bg="white")
 
+home_energy_month%>%filter(year(date)==2023)%>%group_by(source)%>%summarize(kwh=sum(kwh))
+
+
+ggplot(home_energy_month%>%filter(year(date)==2023))+
+  geom_col(aes(date,kwh,group=source,fill=source),color="black",linewidth=0.1)+
+  geom_line(aes(date,net,colour="Monthly Net Energy Consumption"),linewidth=1.1)+
+  scale_fill_manual("",values=c(colors_tableau10()[1],colors_tableau10()[2],colors_tableau10()[9],colors_tableau10_light()[9]))+
+  scale_color_manual("",values=c("black","grey50"))+
+  scale_y_continuous(expand=c(0,0),breaks = pretty_breaks())+
+  scale_x_date(expand=c(0,0),date_breaks = "1 months",date_labels = "%b")+
+  expand_limits(x=ymd("2024-01-01"),y=4500)+
+  guides(fill=guide_legend(nrow =1,byrow=FALSE,label.theme=element_text(colour='black')),
+         color=guide_legend(nrow =1,byrow=FALSE,label.theme=element_text(colour='black'))
+  )+
+  theme_minimal()+
+  theme(
+    legend.position = "bottom",
+    legend.margin=margin(c(.05,0,.05,0),unit="cm"),
+    legend.text = element_text(colour="black", size = 11),
+    plot.caption = element_text(size = 10, face = "italic",hjust=0),
+    plot.title = element_text(size=16,face = "bold"),
+    plot.subtitle = element_text(size = 10),
+    #panel.grid.minor = element_blank(),
+    axis.text.y = element_text(size = 12, colour="black"),
+    axis.text.y.right = element_text(margin = margin(t = 0, r = 10, b = 0, l = 2),color="red"),
+    axis.title.y.right = element_text(margin = margin(t = 0, r = 10, b = 0, l = 2),color="red"),
+    plot.margin = margin(r=20,l=10,b=5),
+    #axis.text.x = element_blank(),
+    axis.text.x = element_text(size = 10, colour = "black", hjust=0.5,vjust=0.5),
+    axis.title.y = element_text(size = 14, colour="black"),
+    axis.ticks = element_blank(),
+    text = element_text(size = 20,family="Times New Roman MS")
+  )+
+  labs(x=NULL,y="Monthly Energy Consumption (kWh)",
+       #title="Household Energy Consumption",
+       #subtitle=paste("Metered natural gas, Neurio-monitored electricity consumpiton, generation, imports, and exports",sep=""),
+       #caption=str_wrap("Data via ACE customer data and personal Neurio. Graph by @andrew_leach.",width = 180),
+       NULL
+  )
+
+
+ggsave("household_use_2023.png",width = 15,height = 9,dpi=200,bg="white")
+
+
+
 
 test<-home_energy_month %>% #arrange(date)%>%#filter(source %in% c("Solar Power","Solar Exports"))%>%
   group_by(source)%>%
