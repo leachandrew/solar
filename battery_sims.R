@@ -1,5 +1,4 @@
 source("../andrew_base.R")
-source("../tableau.R")
 
 
 load("hourly_solar_data.RData")
@@ -31,10 +30,6 @@ hourly_data<-hourly_data %>% mutate(
 
 
 #merge solar data with price data
-if(!exists("get_forecast_report", mode="function")) 
-  source("../alberta_power/aeso_scrapes.R")
-update_forecasts()
-#reload it
 load("../alberta_power/data/forecast_data.Rdata")
 
 #make an he in the sys_data
