@@ -90,8 +90,9 @@ write.csv(daily_data,"leach_solar_daily.csv")
 #bring in meter data
 
 home_gas_data<-read_excel("gas_use.xlsx",skip=2)%>%
-  clean_names()%>%mutate(date=ymd(usage_period_start),
-                         kwh=usage*277.778)
+  clean_names()%>%
+  mutate(date=parse_date_time(usage_period_start, orders = c("dmy", "ymd")),
+  kwh=usage*277.778)
 
 
 
@@ -122,7 +123,7 @@ elec_month<-daily_data %>% filter(start>=ymd("2019-05-01"))%>%
          source=fct_relevel(source,"Natural Gas"),
          source=fct_recode(source,"Natural Gas (Heat, Hot Water, and Cooking)"="Natural Gas"),
          date=ymd(paste(year,month,1,sep="-")))%>%
-  filter(date<ymd("2024-03-01"))%>%
+  filter(date<ymd("2024-12-01"))%>%
     mutate(year=factor(as.character(year)))%>%
     group_by(year,month)%>%
     mutate(net=sum(kwh),share=kwh/net)%>%
@@ -246,18 +247,19 @@ ggsave("household_use_2023.png",width = 15,height = 9,dpi=200,bg="white")
 
 
 library(lubridate)
+source("../alberta_power/aeso_scrapes.R")
+update_forecasts("../alberta_power/data/forecast_data.Rdata")
 load(file="../alberta_power/data/forecast_data.Rdata") 
 forecast_data <- forecast_data %>% filter (he!="02*")
 
 df1 <- hourly_data %>%
   mutate(date=date+1*(he==24))%>%
-  left_join(forecast_data %>% select(date,he,price=actual_posted_pool_price)%>%mutate(he=as.numeric(he)))%>%
-   mutate(month=month(start),value=generationEnergy*price/1000) %>%
+  left_join(forecast_data %>% select(date,he,price=actual_posted_pool_price,ab_ail=actual_ail)%>%mutate(he=as.numeric(he)))%>%
+   mutate(month=month(start),value=generationEnergy/1000*price) %>%
   group_by(he,month,year) %>% 
-  summarise(gen_value=sum(value,na.rm=T),gen=mean(generationEnergy),imps=mean(importedEnergy),cons=mean(consumptionEnergy),net=mean(net_to_grid)) %>%
+  summarise(pool_mean_value=sum(price*ab_ail)/sum(ab_ail),gen_value=sum(value,na.rm=T),gen_total=sum(generationEnergy),gen=mean(generationEnergy),imps=mean(importedEnergy),cons=mean(consumptionEnergy),net=mean(net_to_grid)) %>%
   ungroup() %>% mutate(month=factor(month.abb[month], levels = month.abb),
                        date=ymd(paste(year,month,1,sep="-")))
-
 
 df2<-df1 %>% group_by(month,year,date)%>%summarize(value=sum(gen_value))#%>%#filter(date<ymd("2023-07-31"))
 df2 %>% group_by(year)%>%summarize(value=sum(value))
@@ -280,7 +282,6 @@ p<-
        caption="Source: System data via Neurio API, graph by Andrew Leach")
 print(p)
 ggsave(filename = "monthly_pool_value.png",dpi=300, width = 16,height = 7,bg="white")
-
 
 
 
@@ -862,6 +863,85 @@ ggplot(df1)+
     ) %>% ungroup()
   
 
+hatch_ratio<-function(){
+  #calculate for each year, maximum power shortfall and energy shortfall
+  df1<-sys_data%>% mutate(day_in_year=yday(start),year=factor(year),month=as_factor(month))%>%
+    group_by(month)%>%
+    mutate(
+          nrg_short=cumsum(net_to_grid),
+          power_short=min(net_to_grid)
+    )
+  
+  
+  ggplot(df1)+
+    geom_line(aes(day_in_year,nrg_short,group=year,color=year),size=1.25)+
+    NULL
+  
+
+# Define the Monte Carlo simulation function
+set.seed(123) # For reproducibility
+monte_carlo_results <- 
+  #lapply(1:100, function(iter) {
+  sys_data %>%
+    filter(year==2023)%>%
+    # Add necessary columns
+    mutate(day_in_year = yday(start),
+           year = factor(year),
+           month = as_factor(month)) %>%
+    # Group by month
+    group_by(month,year) %>%
+    # Shuffle the data within each month
+    mutate(day_in_month = day(start)) %>%
+    group_by(month, year) %>%
+    nest() %>%
+    mutate(data = map(data, ~ .x %>%
+                        arrange(sample(day_in_month)) %>%
+                        mutate(
+                          nrg_short = cumsum(net_to_grid),
+                          power_short = min(net_to_grid)
+                        ))) %>%
+    unnest(data)
+#})
+
+}
+
+monte_carlo_results <- 
+  #lapply(1:1, function(iter) {
+  sys_data %>%
+  filter(year==2023)%>%
+    mutate(
+      day_in_year = yday(start),
+      year = factor(year),
+      month = as_factor(month),
+      day_date = as.Date(start),
+      clock_time = format(start, "%H:%M:%S"))%>%
+    group_by(month, year) %>%
+    mutate(day_date_shuffled = sample(day_date)) %>%
+    arrange(month, year, day_date_shuffled,clock_time) %>%
+    # Calculate metrics on the shuffled data
+    mutate(
+      nrg_short = cumsum(net_to_grid),
+      power_short = min(net_to_grid)
+    ) %>%
+    ungroup()
+})
+
+monte_carlo_results <- 
+  #lapply(1:1, function(iter) {
+  sys_data %>%
+  filter(year==2023)%>%
+  mutate(
+      # Combine year, month, and day to create a full date column
+      day_date = as.Date(paste(year, month, date, sep = "-"), format = "%Y-%m-%d"),
+      clock_time = format(start, "%H:%M:%S")
+    ) %>%
+    group_by(month, year) %>%
+    # Sample days with replacement within each month
+    mutate(sampled_day_date = sample(day_date, size = n_distinct(day_date), replace = TRUE)) %>%
+    # Join sampled day_date back to the original rows for the reshuffling
+    ungroup() %>%
+  I()
+#})
 
 
 
