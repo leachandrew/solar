@@ -120,7 +120,7 @@ knitr::include_graphics("household_use.png")
 
 Unlike some jurisdictions, Alberta doesn't allow you to fully offset your electricity charges in months where you are a net generator. The billing becomes a little more complex, since we pay for transmission and distribution on the basis of deliveries of power (e.g. total consumption from *the grid*) and we pay (or get credit) for energy on the basis of our net consumption or net generation in a month. In other words, we never have a month where we don't pay for transmission and distribution, but we pay less than we otherwise would since, in some hours, we're consuming power we generate ourselves. And, in some months, where we generate more than we consume, we get a credit for electricity sold to the grid that's large enough for us to see a negative balance on our bill at the end of the month. In a really good month, we might even see enough value from selling electricity back to the grid to cover the cost of our natural gas as well.
 
-We've been using microgenerator tariffs from [Alberta Cooperative Energy](https://www.acenergy.ca/) since the summer of 2018, and so we face a higher electricity price in the summer than in the winter months. 
+We had been using microgenerator tariffs from [Alberta Cooperative Energy](https://www.acenergy.ca/) since the summer of 2018, and we changed last year to an ENMAX solar contract, and so we face a higher electricity price in the summer than in the winter months. 
 
 ```{r, out.width = "800px",fig.align="center",dpi=300}
 knitr::include_graphics("power_costs.png")
@@ -133,7 +133,7 @@ It's impossible to say what we would have done with our electricity contracts ha
 knitr::include_graphics("solar_vcosts_trim.png")
 ```
 
-So, to date, we've saved a combined $6937 on our electricity bills compared to the RRO. I'll update these calculations for a rolling Enmax fixed price contract shortly.
+So, to date, we've saved a combined $9079 on our electricity bills compared to the RRO and ROLR.
 
 Here are the same savings (contract with solar vs consumption priced at the RRO) expressed as a single line graph.
 
@@ -144,10 +144,10 @@ knitr::include_graphics("solar_savings.png")
 
 ## What's your return on investment?
 
-Now, to get back to the question of our returns thus far on the solar installation, and where we might expect this to go in the future. The levelized monthly cost of my solar panel investment, at a 12% nominal rate of return, is a little over \$133.38. By comparison, my average savings to date has been \$96.35 per month, or about 15.6 cents of savings per kWh of generation. We've seen much higher $143.10 per month average savings in the last two years. If the overall average savings to date continue for the life of the panels, the ROI will be approximately 13% , while if savings are equivalent to the first-6-years' average level, the return on investment (not including *nerd value*) will be a little over 7.5%.
+Now, to get back to the question of our returns thus far on the solar installation, and where we might expect this to go in the future. The levelized monthly cost of my solar panel investment, at a 12% nominal rate of return, is a little over \$133.38. By comparison, my average savings to date has been \$100.88 per month. We've seen much higher average savings in the last three years. If the last three years' average savings to date continue for the life of the panels, the ROI will be approximately 13%, while if savings are equivalent to currenlt lifetime average level, the return on investment (not including *nerd value*) will be a little over 8%.
 
 
-The picture is a little different if you omit the initial government grant from the calculations, increasing the initial cost of the system to \$18,900. In that case, savings need to be closer to $0.097/kWh in order to get a pure break-even on the cost of the system, and more than that to make a return. If the average savings to date are compared to the total cost of the system, the return would be 3.5% if this continued for the life of the system, and the return on investment with savings equivalent to those I've seen over the last 24 months would be a little over 8%.
+The picture is a little different if you omit the initial government grant from the calculations, increasing the initial cost of the system to \$18,900. In that case, savings need to be closer to $0.097/kWh in order to get a pure break-even on the cost of the system, and more than that to make a return. If the average savings to date are compared to the total cost of the system, the return would be 4.2% if this continued for the life of the system, and the return on investment with savings equivalent to those I've seen over the last 36 months would be about 7.8%.
 
 
 

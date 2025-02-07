@@ -2089,6 +2089,7 @@ rro_data<-rro_data %>% mutate(
     (year== 2023)&(month<= 6)~ 0.03834,
     (year== 2023)&(month>= 6)~ 0.03927,
     (year== 2024)~ 0.03907,
+    (year== 2025)~ 0.03825,
     
   ),
   distribution_var=case_when(
@@ -2100,6 +2101,7 @@ rro_data<-rro_data %>% mutate(
     (year==2022)~0.01043,
     (year==2023)~0.01643,
     (year==2024)~0.01752,
+    (year==2025)~0.01712,
   ),
   
   rider_dj=case_when(
@@ -2129,6 +2131,7 @@ rider_k=case_when(
   (year==2023) & (month %in% seq(4,6)) ~ .607/100,
   (year==2023) & (month %in% seq(7,9)) ~ .015/100,
   (year==2024)~ -0.00131,
+  (year==2025)~0.00458,
   TRUE~0
   ),
 
@@ -2142,6 +2145,7 @@ rider_j=case_when(
   (year==2022)~ -0.00125,
   (year==2023) ~ 0.00057,
   (year==2024) ~ 0.00165,
+  (year==2025) ~ 0.00094,
   TRUE~0
   ),
     #Rider G Balancing Pool checked
@@ -2154,6 +2158,7 @@ rider_g=case_when(
   (year==2022) ~ 0.00228,
   (year==2023) ~ 0.00228,
   (year==2024) ~ 0.00135,
+  (year==2025) ~ 0.00135,
   TRUE~0
 ),
 #local access fee
@@ -2166,6 +2171,7 @@ laf=case_when(
   (year==2022) ~ 0.0099,
   (year==2023) ~ 0.0105,
   (year==2024) ~ 0.011099,
+  (year==2025) ~ 0.011186,
   TRUE~0
 ),
 dist_daily=case_when(
@@ -2177,6 +2183,7 @@ dist_daily=case_when(
     (year==2022) ~ 0.71445,
     (year==2023) ~ 0.66988,
     (year==2024) ~ 0.71612,
+    (year==2024) ~ 0.69953,
     TRUE~0
   ),
 bill_fixed=dist_daily*days_in_month(date),
@@ -2253,9 +2260,9 @@ merged_data<-test_data %>%
          savings=consumption_RRO-bill_contract) %>% ungroup()
 
 ggplot(merged_data)+
-  geom_line(aes(date,pool_price,color="Consumption-weighted average pool price"),size=rel(1.25))+
-  geom_line(aes(date,contract_price,color="ACE contract price"),size=rel(1.5))+
-  geom_line(aes(date,rro_price,color="Regulated Rate Option (RRO)"),size=rel(1.25))+
+  geom_line(aes(date,pool_price,color="Consumption-weighted average pool price"),linewidth=rel(0.85))+
+  geom_line(aes(date,contract_price,color="ACE/ENMAX contract price"),linewidth=rel(0.85))+
+  geom_line(aes(date,rro_price,color="Regulated Rate Option (RRO) or Rate of Last Resort (ROLR)"),linewidth=rel(0.85))+
 scale_x_date(date_breaks = "3 months",date_labels =  "%b\n%Y",expand=c(0,0))+
   scale_y_continuous(breaks=pretty_breaks())+
   scale_color_manual("",values=c("black",colors_tableau10()[1],"grey50"))+
@@ -2284,9 +2291,9 @@ merged_data<-merged_data%>% select(date,month,year,net_to_grid,savings,bill_rro,
             contract=fct_recode(contract,
                                 "My Contract Prices w Solar"="bill_contract",
                                 "Pool Prices w Solar"="bill_pool_prices",
-                                "Regulated Rate Option (RRO) w Solar"="bill_rro",
+                                "Regulated Rate (RRO or ROLR) w Solar"="bill_rro",
                                 "My Contract Prices w/o Solar"="consumption_contract",
-                                "Regulated Rate Option (RRO) w/o Solar"="consumption_RRO",
+                                "Regulated Rate (RRO or ROLR) w/o Solar"="consumption_RRO",
                                 "Pool Prices w/o Solar"="consumption_pool_prices"),
             contract=fct_relevel(contract,"My Contract Prices w/o Solar",after = 1),
             contract=fct_relevel(contract,"Pool Prices w/o Solar",after = 3)
@@ -2324,7 +2331,7 @@ ggsave("solar_vcosts.png",width = 16,height = 10,dpi=220,bg="white")
 
 
 
-ggplot(merged_data%>%filter(contract %in% c("My Contract Prices w Solar","Regulated Rate Option (RRO) w/o Solar")))+
+ggplot(merged_data%>%filter(contract %in% c("My Contract Prices w Solar","Regulated Rate (RRO or ROLR) w/o Solar")))+
   #geom_line(aes(date,net,colour="Net"),size=2)+
   
   geom_line(aes(date,bill,group=contract,colour=contract),size=rel(1.25))+
@@ -2355,7 +2362,7 @@ ggplot(merged_data%>%filter(contract %in% c("My Contract Prices w Solar","Regula
 ggsave("solar_vcosts_trim.png",width = 16,height = 10,dpi=220,bg="white")
 
 
-ggplot(merged_data%>%filter(contract %in% c("My Contract Prices w Solar","Regulated Rate Option (RRO) w/o Solar"))%>%
+ggplot(merged_data%>%filter(contract %in% c("My Contract Prices w Solar","Regulated Rate (RRO or ROLR) w/o Solar"))%>%
          select(date, bill,contract)%>%
          pivot_wider(names_from = contract,values_from = bill)%>%
          rename(contract=2,rro=3)%>%
@@ -2396,7 +2403,7 @@ ggsave("solar_savings.png",width = 16,height = 10,dpi=220,bg="white")
 png<-1
 if(png==1)
   set_png("solar_vcosts_contract.png")
-ggplot(filter(merged_data,contract %in% c("My Contract Prices w Solar","RRO Prices w/o Solar")))+
+ggplot(filter(merged_data,contract %in% c("My Contract Prices w Solar","Regulated Rate (RRO or ROLR) w/o Solar")))+
   geom_line(aes(date,bill,group=contract,colour=contract),size=rel(1.25))+
   #geom_line(aes(date,consumption_RRO,colour="RRO Prices w/o Solar"),size=2)+
   #geom_line(aes(date,RRO_bill,colour="RRO Prices w Solar"),size=2)+
@@ -2493,7 +2500,7 @@ uniroot(lcoe, c(.0001,.5), tol = 0.000001,rate_sent=0.035)[[1]]
 
 
 
-ggplot(filter(merged_data,contract %in% c("Regulated Rate Option (RRO) w Solar","Regulated Rate Option (RRO) w/o Solar")))+
+ggplot(filter(merged_data,contract %in% c("Regulated Rate (RRO or ROLR) w Solar","Regulated Rate (RRO or ROLR) w/o Solar")))+
   #geom_line(aes(date,net,colour="Net"),size=2)+
   geom_line(aes(date,bill,group=contract,colour=contract),size=2)+
   #geom_line(aes(date,consumption_RRO,colour="RRO Prices w/o Solar"),size=2)+
