@@ -153,6 +153,10 @@ print(paste("Rate limit reset at ",format(Sys.time()+milliseconds(as.numeric(tes
 test$headers$`ratelimit-remaining`
 }
 
+#neurio_local <- GET("http://192.168.50.4/current-sample")%>%
+#  raise <- content(neurio_local, as="text")%>%fromJSON()
+
+
 #sample_neurio()
 
 get_hourly_data <- function(data_sent,token=token_id,sensor=sensor_id) {

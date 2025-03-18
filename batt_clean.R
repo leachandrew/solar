@@ -1,5 +1,6 @@
-source("../andrew_base.R")
-
+library(tidyverse)
+library(ggpubr)
+library(gridExtra)
 
 load("hourly_solar_data.RData")
 hourly_data<-hourly_data %>% rename(net_from_grid=net_to_grid)

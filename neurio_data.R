@@ -5,6 +5,7 @@ library(jsonlite)
 library(viridis)
 library(scales)
 library(janitor)
+library(stringi)
 sensor_id <- "0x0000C47F510354AE"
 
 #
@@ -13,6 +14,9 @@ sensor_id <- "0x0000C47F510354AE"
 #status check, neurio API
 neurio_api <- GET("https://api.neur.io/v1/status")
 neurio_r <- fromJSON(rawToChar(neurio_api$content))
+
+
+neurio_local <- GET("http://192.168.50.4/current-sample")
 
 
 #save(list = c("my_client_id", "my_client_secret","sensor_id"), file = "neurio_credentials.Rdata")
@@ -678,7 +682,7 @@ cumulative_graphs<-function(){
       mutate(max_net=max(cum_net)))+
     #geom_smooth(aes(date,-net),method = "lm", formula = y ~ splines::bs(x, 3), se = TRUE)+
     geom_line(aes(date,cum_gen,group=year,color=year),size=2)+
-    scale_color_manual("",values=colors_ua10())+
+    scale_color_manual("",values=colors_tableau10())+
     #  scale_fill_viridis(discrete=TRUE)+
     #scale_x_discrete()+
     #scale_x_discrete(limits = c(0,23))+
@@ -2432,6 +2436,10 @@ if(png==1)
   dev.off()
 
 
+test<-merged_data %>% pivot_wider(names_from = contract,values_from = bill)%>%clean_names()%>%
+  mutate(calc_savings=my_contract_prices_w_solar-regulated_rate_rro_or_rolr_w_o_solar)
+
+sum(test$calc_savings)
 
 
 npv<-function(init= 13230,m_ret,rate=.1,years=25){
@@ -2442,19 +2450,24 @@ npv<-function(init= 13230,m_ret,rate=.1,years=25){
 npv(init = 13230,m_ret=mean(merged_data$savings[merged_data$contract=="My Contract Prices w Solar"]),rate=.0251,years=25)
 
 
-solar_irr<-function(rate_sent,m_ret_sent){
-  npv(init = 18900,m_ret=m_ret_sent,rate=rate_sent,years=25)
+solar_irr<-function(rate_sent=0.05,m_ret_sent=101){
+  #npv(init = 18900,m_ret=m_ret_sent,rate=rate_sent,years=25)
+  npv(init = 13230,m_ret=m_ret_sent,rate=rate_sent,years=25)
 }
 
 savings_all<-as.numeric(merged_data %>% arrange(date)%>%filter(contract=="My Contract Prices w Solar")%>%
                          summarize(savings=mean(savings)))
 
+savings_rec<-as.numeric(merged_data %>% arrange(date)%>%
+                          filter(contract=="My Contract Prices w Solar")%>%
+                          filter(date>=Sys.Date()-years(3))%>%
+                          summarize(savings=mean(savings)))
 
 #solve(solar_irr())
 uniroot(solar_irr, c(.0001,.5), tol = 0.000001,m_ret_sent=savings_all)[[1]]
 
 
-uniroot(solar_irr, c(.0001,.5), tol = 0.000001,m_ret_sent=savings_24)[[1]]
+uniroot(solar_irr, c(.0001,.5), tol = 0.000001,m_ret_sent=savings_rec)[[1]]
 
 
 savings_24<-as.numeric(merged_data %>% arrange(date)%>%filter(contract=="My Contract Prices w Solar")%>%
@@ -2464,7 +2477,7 @@ savings_24<-as.numeric(merged_data %>% arrange(date)%>%filter(contract=="My Cont
 
 savings_24
 
-npv(init = 13230,m_ret=133.38,rate=.12,years=25)
+npv(init = 13230,m_ret=103.38,rate=.05,years=25)
 
 
 npv(init = 13230,m_ret=7418/12*.20,rate=.12,years=25)
