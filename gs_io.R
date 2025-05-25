@@ -47,7 +47,7 @@ get_gsio<-function(dataset,start=NA,end=NA,tz="UTC",key_sent=grid_status_key)
 
 df_list<-list()
 i<-1
-for(y_index in seq(2019,2023))
+for(y_index in seq(2019,2025))
   {
   #y_index<-2023
   df_list[[i]]<-
@@ -69,8 +69,8 @@ for(y_index in seq(2019,2023))
 #test<-get_gsio(dataset="caiso_standardized_5_min",start=ymd_hm(paste("2023-5-01 0:00",sep=""),tz="America/Los_Angeles"),
 #         end=ymd_hm(paste("2023-05-31 11:59",sep=""),tz="America/Los_Angeles"))
 
-df_list[[i]]<-get_gsio(dataset="caiso_standardized_5_min",start=ymd_hm(paste(2024,"-3-01 0:00",sep=""),tz="America/Los_Angeles"),
-                       end=ymd_hm(paste(2024,"-03-31 11:59",sep=""),tz="America/Los_Angeles"))
+df_list[[i]]<-get_gsio(dataset="caiso_standardized_5_min",start=ymd_hm(paste(2021,"-3-01 0:00",sep=""),tz="America/Los_Angeles"),
+                       end=ymd_hm(paste(2025,"-05-23 11:59",sep=""),tz="America/Los_Angeles"))
 
 
 
@@ -111,7 +111,7 @@ duck_spag<-
 
 
 
-ggplot(duck%>%filter(year!=2024))+
+ggplot(duck%>%filter(year!=2026))+
   geom_line(aes(time_temp,avg_net_load,group=as.factor(year),color=as.factor(year)))+
   #geom_line(data=duck_min,aes(time_temp,avg_net_load,group=as.factor(year),color=as.factor("2023 (minimum net load day)")))+
   facet_wrap(~month,nrow = 1)+
@@ -151,7 +151,7 @@ ggplot(duck%>%filter(month=="Apr"|year==2024)%>%mutate(year=paste(month,year)))+
   #facet_wrap(~month,nrow = 1)+
   scale_y_continuous(expand=c(0,0))+
   expand_limits(y=0)+
-  scale_color_manual("",values=colors_ua10())+
+  #scale_color_manual("",values=colors_ua10())+
   scale_x_datetime(expand=c(0,0),date_labels = "%H",date_breaks = "1 hours")+
   guides(color=guide_legend(nrow = 1))+
   theme_minimal()+
@@ -263,4 +263,59 @@ ggsave("images/spag_ducks_progression.png",width=14.5,height=7,bg="white",dpi=20
 
 
 
-https://api.gridstatus.io/v1/datasets/caiso_standardized_5_min&start_time=2023-06-02 10:03:30&end_time=2023-06-04 10:05:47&api_key=6cb5e350439cdec7f79c2dd592480e95
+#https://api.gridstatus.io/v1/datasets/caiso_standardized_5_min&start_time=2023-06-02 10:03:30&end_time=2023-06-04 10:05:47&api_key=6cb5e350439cdec7f79c2dd592480e95
+
+
+#ercot fuel mix
+
+df_list<-list()
+i<-1
+for(y_index in seq(2019,2025))
+{
+  #y_index<-2023
+  df_list[[i]]<-
+    get_gsio(dataset="ercot_fuel_mix",start=ymd_hm(paste(y_index,"-01-01 0:00",sep=""),tz="America/Denver"),
+             end=ymd_hm(paste(y_index,"-04-30 11:59",sep=""),tz="America/Denver"))
+  
+  i<-i+1
+  df_list[[i]]<-
+    get_gsio(dataset="ercot_fuel_mix",start=ymd_hm(paste(y_index,"-05-01 0:00",sep=""),tz="America/Denver"),
+             end=ymd_hm(paste(y_index,"-08-31 11:59",sep=""),tz="America/Denver"))
+  
+  i<-i+1
+  df_list[[i]]<-
+    get_gsio(dataset="ercot_fuel_mix",start=ymd_hm(paste(y_index,"-09-01 0:00",sep=""),tz="America/Denver"),
+             end=ymd_hm(paste(y_index,"-12-31 11:59",sep=""),tz="America/Denver"))
+  
+  i<-i+1
+}
+
+ercot_data<-df_list %>% bind_rows()
+
+
+df_list<-list()
+i<-1
+for(y_index in seq(2019,2025))
+{
+  #y_index<-2023
+  df_list[[i]]<-
+    get_gsio(dataset="ercot_load",start=ymd_hm(paste(y_index,"-01-01 0:00",sep=""),tz="America/Denver"),
+             end=ymd_hm(paste(y_index,"-04-30 11:59",sep=""),tz="America/Denver"))
+  
+  i<-i+1
+  df_list[[i]]<-
+    get_gsio(dataset="ercot_load",start=ymd_hm(paste(y_index,"-05-01 0:00",sep=""),tz="America/Denver"),
+             end=ymd_hm(paste(y_index,"-08-31 11:59",sep=""),tz="America/Denver"))
+  
+  i<-i+1
+  df_list[[i]]<-
+    get_gsio(dataset="ercot_load",start=ymd_hm(paste(y_index,"-09-01 0:00",sep=""),tz="America/Denver"),
+             end=ymd_hm(paste(y_index,"-12-31 11:59",sep=""),tz="America/Denver"))
+  
+  i<-i+1
+}
+
+ercot_load<-df_list %>% bind_rows()
+
+
+
